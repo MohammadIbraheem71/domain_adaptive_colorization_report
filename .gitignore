@@ -1,0 +1,38 @@
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.synctex.gz
+*.toc
+*.xdv
+*.dvi
+*.nav
+*.snm
+*.vrb
+*.run.xml
+*-blx.bib
+
+# Generated PDF (keep figures and other source PDFs tracked)
+f26_066_report/main.pdf
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python virtual environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
