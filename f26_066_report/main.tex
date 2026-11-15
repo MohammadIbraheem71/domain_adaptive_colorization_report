@@ -1295,8 +1295,8 @@ Each expert domain has a predefined list of text prompts built into the system, 
         \hline
         Portraits and people & person, face \\
         Nature and landscapes & sky, vegetation, tree\\
-        Urban and man-made scenes & buildings \\
-        Animals & animals\\
+        Urban and man-made scenes & building \\
+        Animals & animal\\
         \hline
     \end{tabular}
 \end{table}
@@ -1315,7 +1315,7 @@ For an input image the decomposition stage proceeds as follows.
     \item Output. The stage returns a list of regions. Each region holds a binary mask, a label (the prompt that produced it), a confidence score, and a bounding box. The routing stage uses the label (Section~\ref{sec:routing}) and the extraction stage uses the bounding box (Section~\ref{sec:extraction}).
 \end{enumerate}
 
-The parameters of this stage are the maximum image side, the box threshold, the text threshold, the minimum detection score, the suppression threshold, and the merge threshold. Their values are selected on a tuning split of the segmentation dataset, a random subset of images drawn from its official training split and not used for any reported result. The resulting decomposition is compared against the ground-truth labels of this tuning split, and the parameters are then fixed before the segmentation test set (Section~\ref{sec:evaluation}) is used.
+The stage has six parameters: the maximum image side, the box threshold, the text threshold, the minimum detection score, the suppression threshold, and the merge threshold. The maximum image side is fixed at 1024 pixels as a memory limit. The other five are selected on a tuning split of COCO-Stuff: a fixed random subset of 200 images from the official training split, not used for any reported result. The search is a single pass over the parameters, one at a time: each parameter is varied over a small grid while the others remain at their current best value, and the value with the highest mIoU is kept, with ties broken by the higher coverage. The grids are 0.25 to 0.45 in steps of 0.05 for the box threshold, 0.20, 0.25, and 0.30 for the text threshold, 0.30, 0.35, and 0.45 for the minimum score, 0.40, 0.50, and 0.60 for the suppression threshold, and 0.50, 0.60, and 0.70 for the merge threshold. The selected values are 0.25, 0.30, 0.30, 0.50, and 0.50, respectively. The resulting decomposition is compared against the ground-truth labels of the tuning split, and the parameters are then fixed before the segmentation test set (Section~\ref{sec:evaluation}) is used.
 
 \subsection{Limitations of the Decomposition Stage}
 
@@ -1376,6 +1376,12 @@ Some pixels belong to no region because no prompt matched them, a detection was
 filtered out, or its label could not be routed. The fallback is represented as
 region $k=0$. Its binary mask contains the pixels with no owner after routing,
 and its expert uses the pretrained DDColor-T checkpoint.
+
+The fallback therefore runs whenever at least one pixel is uncovered. In the E1
+test set this was true for all 500 images, so in practice every image receives
+some fallback colorization. At 0.427 coverage, the fallback handled 0.573 of the
+evaluated pixels, so the share of each image colorized by the domain experts
+depends on coverage as much as on routing (Section~\ref{sec:evaluation}).
 
 In E4, the runner draws a bounding box around the uncovered pixels and applies
 the same contextual cropping procedure used for routed regions. If no regions
@@ -1654,15 +1660,32 @@ Four kinds of test data are used.
 \begin{itemize}
     \item Domain test sets: For each expert domain, the held-out test images of the domain datasets (Table~\ref{tab:datasets}). They are used to evaluate each expert on its own domain.
     \item Region-crop test sets: The region crops that the pipeline produces from the domain test images, using the decomposition and extraction stages. They are used to measure how the experts perform on the inputs they receive at inference, as opposed to whole images (Section~\ref{sec:training}).
-    \item Segmentation tuning and test sets: The segmentation dataset (ADE20K or COCO) is used in two disjoint parts. The tuning split is a random subset of its official training split and is used to select the decomposition parameters (Section~\ref{sec:decomposition}). The test set is its official validation split, which is not used for any selection and is evaluated only after all parameters are fixed. The test set is used to evaluate region decomposition and routing.
+    \item Segmentation tuning and test sets: The segmentation dataset is COCO-Stuff. The tuning split is a fixed random subset of 200 images from the official train2017 split (seed 42), and the test set is a fixed random subset of 500 images from the official val2017 split (seed 43). The two lists of image identifiers are stored and are disjoint. The tuning split is used only to select the decomposition parameters (Section~\ref{sec:decomposition}); the test set is evaluated only after all parameters are fixed and is used to evaluate region decomposition and routing.
     \item Mixed-scene test set: Images that contain regions from at least two domains (for example a person in an urban scene), selected from the segmentation test set using its annotations.
 \end{itemize}
 
-The ground truth for colorization is the original color image, and the grayscale input is its $L$ channel. Test images are never used for training or for choosing parameters. The detection and merge thresholds are chosen on the segmentation tuning split. The smoothing width $\sigma_0$ and the boundary fraction $\rho$ are chosen on the validation images of the domain datasets. Where two datasets contain the same image, the duplicate is removed from the training data before the test images are fixed.
+The ground truth for colorization is the original color image, and the grayscale input is its $L$ channel. Test images are never used for training or for choosing parameters. The decomposition parameters are chosen on the segmentation tuning split. The smoothing width $\sigma_0$ and the boundary fraction $\rho$ are chosen on the validation images of the domain datasets. Where two datasets contain the same image, the duplicate is removed from the training data before the test images are fixed.
 
 \subsection{Region Decomposition Metrics}
 
-The quality of decomposition is measured with the mean intersection-over-union (mIoU) on COCO-Stuff~\cite{caesar2018cocostuff}, which provides both object (thing) and background (stuff) classes, such as sky, grass, tree, water, and road, for the same images. Plain COCO instance annotations contain only object classes and cannot evaluate the nature and urban prompts. Each ground-truth class is mapped to the prompt label that covers it. The \textit{animal} prompt covers all of the animal classes of the dataset (for example dog, cat, bird, horse, and cow), and prompts that name closely related categories, such as \textit{vegetation} and \textit{tree}, are evaluated together as one group. The prompt \textit{face} is evaluated as part of the person group, since COCO-Stuff has no face class. Classes without a matching prompt are ignored. Every pixel of a test image is given a predicted group, which is the group of the label of the region that owns it after overlap resolution (Section~\ref{sec:overlap}), or an \textit{uncovered} label if no region owns it. The IoU of each group is computed between the predicted and ground-truth label maps, and mIoU is the mean over the groups. It is reported for each group, for each domain (by merging the groups of a domain), and overall. The fraction of pixels owned by some region is reported with it, because this fraction determines how much of an image is colorized by the fallback expert rather than a domain expert.
+The quality of decomposition is measured with the mean intersection-over-union (mIoU) on COCO-Stuff~\cite{caesar2018cocostuff}, which provides both object (thing) and background (stuff) classes, such as sky, grass, tree, water, and road, for the same images. Plain COCO instance annotations contain only object classes and cannot evaluate the nature and urban prompts. Each ground-truth class is mapped to the prompt label that covers it. The \textit{animal} prompt covers all of the animal classes of the dataset (for example dog, cat, bird, horse, and cow), and prompts that name closely related categories, such as \textit{vegetation} and \textit{tree}, are evaluated together as one group. The prompt \textit{face} is evaluated as part of the person group, since COCO-Stuff has no face class. Classes without a matching prompt are ignored. Table~\ref{tab:a_groups} lists the COCO-Stuff classes that make up each scoring group.
+
+\begin{table}[htbp]
+\centering
+\caption{Ground-truth groups used for scoring decomposition and routing.}
+\label{tab:a_groups}
+\begin{tabular}{|l|l|p{7.5cm}|}
+\hline
+\textbf{Group} & \textbf{Domain} & \textbf{COCO-Stuff classes} \\ \hline
+person & People & person \\ \hline
+animal & Animals & bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe \\ \hline
+sky & Nature & sky-other, clouds \\ \hline
+vegetation & Nature & tree, grass, bush, plant-other, flower, leaves, branch \\ \hline
+building & Urban & building-other, house, roof, skyscraper \\ \hline
+\end{tabular}
+\end{table}
+
+Every pixel of a test image is given a predicted group, which is the group of the label of the region that owns it after overlap resolution (Section~\ref{sec:overlap}), or an \textit{uncovered} label if no region owns it. The IoU of each group is computed between the predicted and ground-truth label maps, and mIoU is the mean over the groups. Intersection and union are accumulated in a single confusion matrix over the whole test set, so mIoU is not an average of per-image IoU values. Pixels that no region covers count as missed pixels (false negatives) of their true group and are not counted as false positives of any group. Ground-truth maps are resized to the working resolution with nearest-neighbour interpolation before scoring. The result is reported for each group, for each domain (by merging the groups of a domain), and overall. Coverage is reported as the pooled fraction of all test pixels that are owned by some region, not as the mean of the per-image coverage values, and the pooled definition is used whenever a single coverage value is quoted. This fraction determines how much of an image is colorized by the fallback expert rather than a domain expert.
 
 \subsection{Expert Colorization Metrics}
 \label{sec:expert-metrics}
@@ -1680,7 +1703,7 @@ A grayscale photograph has many plausible colorings, so similarity to the one or
 
 \subsection{Routing Accuracy}
 
-Routing accuracy is the fraction of regions that are assigned to the correct expert. For each region produced on the segmentation test set, the correct expert is determined from the ground truth. The ground-truth class that covers the largest share of the region's pixels is found, and the domain of that class is taken from the class-to-domain mapping. A region is routed correctly if its assigned domain equals this domain. Regions whose dominant class belongs to no domain are excluded from the accuracy and counted separately. The accuracy is reported overall and for each domain, with a confusion matrix between domains. Since routing is a lookup from the label (Section~\ref{sec:routing}), this metric measures the combined correctness of the detector's labels and of the mapping.
+Routing accuracy is the fraction of regions that are assigned to the correct expert. For each region produced on the segmentation test set, the region's pixels are the pixels it owns after overlap resolution (Section~\ref{sec:overlap}), not its raw segmentation mask. The ground-truth class that covers the largest share of these pixels is found, and ties between classes are resolved in favour of the class with the lowest class number. The domain of that class is taken from the class-to-domain mapping. A region is routed correctly if its assigned domain equals this domain. Regions whose dominant class belongs to no domain are excluded from the accuracy and counted separately; regions that contain no labeled pixel are also excluded and counted separately (41 routed regions in the E1/E2 test set). The accuracy is reported overall and for each domain, with a confusion matrix between domains. Since routing is a lookup from the label (Section~\ref{sec:routing}), this metric measures the combined correctness of the detector's labels and of the mapping.
 \subsection{Blending Metrics}
 
 E4 compares the default soft-blending configuration with a variant that
@@ -2730,21 +2753,6 @@ The first experiment checks how well the decomposition stage finds the regions t
  
 \paragraph{Ground truth.} The COCO-Stuff label maps store the class index of every pixel as an 8-bit value, with 255 for unlabeled pixels. The official description states that the stored value equals the class number in the label file minus one, and the data check run before the experiment selected this offset. As described in Section 5.8.2, ground-truth classes are mapped to the prompt group that covers them (Table~\ref{tab:a_groups}). The prompts \textit{person} and \textit{face} are both scored against the person group, since COCO-Stuff has no face class, and \textit{vegetation} and \textit{tree} are scored together as one vegetation group. Pixels of all other classes, and unlabeled pixels, are ignored in the scores.
  
-\begin{table}[!ht]
-\centering
-\caption{Ground-truth groups used for scoring decomposition and routing.}
-\label{tab:a_groups}
-\begin{tabular}{|l|l|p{7.5cm}|}
-\hline
-\textbf{Group} & \textbf{Domain} & \textbf{COCO-Stuff classes} \\ \hline
-person & People & person \\ \hline
-animal & Animals & bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe \\ \hline
-sky & Nature & sky-other, clouds \\ \hline
-vegetation & Nature & tree, grass, bush, plant-other, flower, leaves, branch \\ \hline
-building & Urban & building-other, house, roof, skyscraper \\ \hline
-\end{tabular}
-\end{table}
- 
 \paragraph{Metric.} The predicted group of a pixel is the group of the label of the region that owns it after overlap resolution, or ``uncovered'' if no region owns it. Predictions and ground truth are accumulated into one confusion matrix over all test images, and the intersection over union of a group $g$ is
 \begin{equation}
 \mathrm{IoU}_g=\frac{TP_g}{TP_g+FP_g+FN_g}.
@@ -2809,7 +2817,6 @@ IoU, vegetation & 0.432 \\ \hline
 IoU, nature domain (sky and vegetation merged) & 0.644 \\ \hline
 IoU, building (domain Urban) & 0.481 \\ \hline
 Coverage, pooled over all pixels & 0.427 \\ \hline
-Coverage, mean of the per-image values & 0.430 \\ \hline
 Pixels given to the fallback (pooled) & 0.573 \\ \hline
 Images in which the fallback would run & 500 of 500 \\ \hline
 Mean number of routed regions per image & 5.55 \\ \hline
