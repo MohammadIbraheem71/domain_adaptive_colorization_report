@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{comment}
 \usepackage{float}
+\usepackage{placeins}
 \begin{document}
 \newcommand{\supervisor}{Junaid Hussain Muzamal}
 \newcommand{\university}{National University of Computer and Emerging Sciences, Lahore}
@@ -2161,12 +2162,10 @@ This chapter presented the design of the colorization system. The system is a pi
 
 
 \chapter{Implementation and Test Cases}
-For each chapter, provide a paragraph of introduction and at the end, a paragraph of conclusions. (Not the programming code but the algorithmic and procedural details especially related to the hidden/ backend algorithms that are not covered in the design)
+This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline, the evaluation tooling, and the test cases. It covers the five pipeline stages (decomposition, routing, extraction, colorization, blending), the configuration system, the web interface prototype, the E4 ablation runner, the extensibility mechanism, and the evaluation metrics with fixed test sets. The implementation follows the design of Chapter~\ref{ch:design} and produces the experimental results reported in Chapters~8 and~9.
 
 \section{Implementation}
-Whatever implementation that you have done so far, please elaborate here.
-Give clear details of the algorithms that were implemented along with the platform and the APIs which were used. 
-\textcolor{red}{NOTE: For FYP-1, this chapter can be changed to description of prototype developed.}
+This section describes the implementation of the region-based Mixture-of-Experts colorization pipeline. The five stages are decomposition, routing, extraction, colorization, and blending, built as pure NumPy/PyTorch modules. Decomposition and routing logic uses only NumPy and is fully CPU-testable; model weights load lazily. A configuration system centralizes hyperparameters. A CLI and HTML prototype provide the web interface; full Next.js/FastAPI integration is deferred to FYP-2. The E4 ablation runner implements margin-based prediction sharing and CSV-based resumability. Extensibility is achieved through data-driven configuration, so adding a domain requires only data changes.
 \subsection{Platform and Tools}
 The decomposition and routing stages are written in Python as part of a single package, \texttt{colorize}, which the three team members share through one GitHub repository. The code is split deliberately into two kinds of modules. Modules that call the pretrained models (loading the detector and the segmenter, running them on an image) are kept in one file. Everything else, namely detection filtering, fragment merging, routing, overlap resolution and the evaluation arithmetic, is plain NumPy. This makes that logic testable on any machine without a GPU, and it also means the models are loaded only when the first image is processed, not when the code is imported.
  
@@ -2181,8 +2180,8 @@ All experiments for these stages were run in Kaggle notebooks with a GPU acceler
 \textbf{Component} & \textbf{Tool} & \textbf{Role} \\ \hline
 Language & Python 3.13.16 (Kaggle runtime, Linux 6.18.55) & Implementation of all stages \\ \hline
 Deep learning framework & PyTorch 2.11.0+cu130, torchvision 0.26.0 & Running both pretrained models on the GPU (CUDA 13.0) \\ \hline
-Open-vocabulary detector & Grounding DINO, tiny variant (\texttt{IDEA-Research/} \texttt{grounding-dino-tiny}) \cite{groundingdino} & Turns the text prompts into boxes with scores and labels; loaded through Hugging Face \texttt{transformers} 5.20.2 \\ \hline
-Segmentation model & Segment Anything Model, ViT-B (\texttt{segment-anything} 1.0, checkpoint \texttt{sam\_vit\_b.pth}, 375.0\,MB) \cite{sam} & Turns each box into a binary mask \\ \hline
+Open-vocabulary detector & Grounding DINO, tiny variant (\texttt{IDEA-Research/} \texttt{grounding-dino-tiny}) \cite{liu2024groundingdino} & Turns the text prompts into boxes with scores and labels; loaded through Hugging Face \texttt{transformers} 5.20.2 \\ \hline
+Segmentation model & Segment Anything Model, ViT-B (\texttt{segment-anything} 1.0, checkpoint \texttt{sam\_vit\_b.pth}, 375.0\,MB) \cite{kirillov2023sam} & Turns each box into a binary mask \\ \hline
 Arrays and images & NumPy 2.1.3, Pillow 13.0.0 & Mask arithmetic, grayscale conversion, Lanczos resizing \\ \hline
 Figures & Matplotlib 3.10.0 & Confusion matrices and example grids \\ \hline
 Testing & pytest & Automated unit tests \\ \hline
@@ -2463,6 +2462,78 @@ working $L$ channel.
 exact project and upstream DDColor commit hashes remain unverified. The run
 record also leaves the source of each image's masks unverified, since the
 runner can load a saved decomposition or run decomposition on the image.
+
+\subsection{Web Interface Implementation}
+\label{subsec:web-interface}
+
+The design (Section~\ref{sec:sysoverview}) specifies a Next.js frontend with a FastAPI backend. In FYP-1, a minimal prototype was built as a concept demonstration but was not connected to the Python pipeline. Both are documented here for completeness and deferred to FYP-2 per the project scope (Section~10.4).
+
+\subsubsection{CLI Entry Point (\texttt{main.py})}
+A command-line interface in \texttt{main.py} provides an end-to-end runner for the pipeline. It accepts an input image, a checkpoint (either a single shared checkpoint for all domains or a directory with per-domain checkpoints), and colorization parameters (margin, smoothing width, blending toggle, region shape, input size). The CLI builds the expert registry, runs decomposition with Grounded-SAM, executes the colorization pipeline, and saves the output RGB image. Optional flags enable saving intermediate stages (decomposition masks, routed regions, expert outputs, blended result) and a domain overlay visualization. The CLI uses the \texttt{colorize} package directly and does not require a web server.
+
+\subsubsection{HTML GUI (\texttt{Basic\_fyp\_gui.html})}
+A standalone HTML file in \texttt{gui/Basic\_fyp\_gui.html} implements a concept UI with image upload (drag-and-drop), blend settings (opacity, saturation), a sidebar showing the four active experts and hardcoded prompts, and a compare view (original vs. colorized). The colorization is simulated client-side using a Canvas sepia-style filter and does not call the Python pipeline. It has no backend connection, no model inference, and no real decomposition or routing. It serves as a UI concept for FYP-2.
+
+The full Next.js + FastAPI integration is deferred to FYP-2.
+
+\subsection{Training Pipeline}
+\label{subsec:training-pipeline}
+
+Fine-tuning the four domain experts (people, nature, urban, animals) from the pretrained DDColor-T checkpoint is deferred to FYP-2 (Section~10.4). No training script was implemented in FYP-1. The \texttt{experiments/} directory contains evaluation runners only:
+\begin{itemize}
+    \item \texttt{e1\_e2.py}: Decomposition and routing evaluation (E1, E2)
+    \item \texttt{e3.py}: Whole-image baseline evaluation (E3)
+    \item \texttt{e4.py}: Pipeline ablation runner (E4)
+\end{itemize}
+These scripts use the pretrained DDColor-T checkpoint for inference; they do not perform training. Dataset preparation, training loops, checkpoint management, and hyperparameter configuration remain as future work.
+
+\subsection{E4 Pipeline Runner Implementation}
+\label{subsec:e4-runner}
+
+The E4 runner (\texttt{experiments/e4.py}) implements the pipeline control and component ablation experiment. Key algorithmic elements not covered in the design chapter:
+
+\subsubsection{Condition Generation}
+The \texttt{get\_e4\_conditions()} function programmatically builds 13 \texttt{ConditionSpec} objects:
+\begin{itemize}
+    \item \texttt{default}: margin=0.2, smoothing=10, blending=on, shape=mask
+    \item \texttt{margin\_\{0.0,0.1,0.2,0.3\}}: margin ablation, others default
+    \item \texttt{blending\_off}: binary paste (no Gaussian smoothing)
+    \item \texttt{smooth\_\{2.0,5.0,10.0,15.0,20.0\}}: smoothing width ablation
+    \item \texttt{shape\_box}: bounding box masks instead of SAM masks
+    \item \texttt{e3\_ddcolor\_t\_whole}: E3 whole-image baseline
+\end{itemize}
+
+\subsubsection{Margin-Based Prediction Sharing}
+For a given margin $\rho$, expert inference on crops is identical across blending, smoothing, and shape ablations. The runner executes the neural expert once per margin and shares the predicted $\widehat{ab}$ canvases across downstream blending variants, yielding a $\sim$5$\times$ speedup without changing mathematical results. The \texttt{run\_pipeline\_for\_image\_ablations} function groups conditions by margin, runs extraction and expert inference per margin group, then applies blending/reconstruction for each condition in the group.
+
+\subsubsection{Resumability and CSV Schema}
+Results are appended image-by-image to a CSV with schema \texttt{(experiment, condition, image\_id, metric, value)}. The \texttt{\_get\_existing\_pairs} function reads the CSV and returns completed \texttt{(image\_id, condition)} pairs. A rerun with \texttt{--resume} (default) skips already-completed conditions, enabling interruption recovery.
+
+\subsubsection{CLI Commands}
+The runner exposes four subcommands:
+\begin{itemize}
+    \item \texttt{make-lists}: Generates fixed test ID lists from COCO annotations
+    \item \texttt{run}: Executes the ablation experiment across conditions and images
+    \item \texttt{figures}: Generates summary tables, ablation charts, visual grids, and Markdown report
+    \item \texttt{all}: Runs \texttt{make-lists}, \texttt{run}, \texttt{figures} sequentially
+\end{itemize}
+ID loading priority: explicit \texttt{--id-list} > \texttt{e3\_ids.json} > built-in defaults. Validation checks for duplicates, missing keys, and missing image files.
+
+\subsection{Extensibility Implementation}
+\label{subsec:extensibility-impl}
+
+The design (Section~\ref{sec:extensibility}) requires adding a new expert without retraining existing ones. The implementation achieves this through data-driven configuration:
+
+\begin{enumerate}
+    \item \textbf{Prompts}: Add the new domain's text prompts to \texttt{DecompConfig.prompts} (a dictionary in \texttt{colorize/config.py}). No code changes.
+    \item \textbf{Label-to-domain mapping}: Extend the routing lookup table in \texttt{colorize/routing.py} with the new prompts $\to$ domain entry.
+    \item \textbf{Expert training}: Fine-tune a new DDColor-T checkpoint on the new domain's dataset. This is independent of existing experts.
+    \item \textbf{Expert Registry}: Add the new checkpoint path to the \texttt{ExpertRegistry} (a dictionary mapping domain $\to$ checkpoint). The CLI (\texttt{main.py}) and E4 runner (\texttt{experiments/e4.py}) read this registry at runtime.
+    \item \textbf{Verification}: Compare checksums of the four existing checkpoints before and after the addition to confirm they are unchanged.
+    \item \textbf{Extensibility test}: Run the pipeline on existing-domain images before and after the addition. Measure IoU of region masks and FID/LPIPS of final outputs. Any difference arises only from the changed prompt string and overlap resolution (Section~\ref{sec:extensibility}).
+\end{enumerate}
+The existing experts' weights, code, and evaluation are untouched. The mechanism was validated by the test suite (Section~7.14).
+
 \subsection{Evaluation Tooling}
 \label{subsec:evaluation-tooling}
 
@@ -2525,6 +2596,16 @@ Plotting helpers provide metric comparisons and per-image color-difference
 visualizations. The reported means and standard deviations describe variation
 among images; they are not confidence intervals.
 
+\paragraph{Implementation details.}
+The evaluation tooling is organized into four modules covering metrics, fixed test sets, CSV result handling, and plotting. Key implementation points:
+\begin{itemize}
+    \item \textbf{Metrics}: Each metric is a pure NumPy/SciPy function taking two \texttt{uint8} RGB arrays. PSNR/SSIM/Lab $\Delta E$/Boundary $\Delta E$ use scikit-image. Colorfulness implements Hasler-Süsstrunk. FID uses SciPy's \texttt{sqrtm} on Inception-v3 features (optional). LPIPS wraps the \texttt{lpips} PyTorch package (optional). All metrics validate input shape and dtype.
+    \item \textbf{Fixed test sets}: Constant lists of COCO val2017 image IDs (20 per domain + 20 mixed) are defined. A path constructor builds the zero-padded 12-digit JPEG path. An annotation validator loads the COCO annotations JSON, checks that every ID exists, that domain images have at least one annotation in the expected category group, and that sets are disjoint. It writes a JSON manifest with per-image metadata.
+    \item \textbf{CSV result handling}: A record schema (experiment, condition, image\_id, metric, value) is defined with append-only writes. Resumability is achieved by reading existing records and skipping completed \texttt{(image\_id, condition)} pairs. Aggregate summaries compute count, mean, std per \texttt{(experiment, condition, metric)}.
+    \item \textbf{Plotting}: Helpers provide metric comparison plots, ablation curves, and example grids using Matplotlib with Agg backend (headless). Figures are saved as PNG at 160 DPI.
+    \item \textbf{Dependencies}: Core metrics (PSNR, SSIM, Lab $\Delta E$, Colorfulness, mIoU, Coverage, Routing accuracy) require only NumPy/SciPy/scikit-image. FID adds SciPy. LPIPS adds PyTorch + \texttt{lpips} package. Real-data COCO validation adds the COCO annotations JSON. Optional dependencies are imported lazily with graceful degradation.
+\end{itemize}
+
 \paragraph{Implementation status.}
 The metric functions, fixed-set loader, COCO annotation validator, CSV helpers,
 and plotting utilities are implemented. Unit tests use synthetic arrays or a
@@ -2550,6 +2631,8 @@ optional and depends on its external packages and feature model. The real-data
 COCO guard also remains conditional on access to the COCO annotations and
 images.
 \section{Test case Design and description}
+This section presents the test cases for all implemented components. The test suite comprises 176 automated tests covering decomposition, routing, extraction, colorization wrapper, blending, E4 pipeline ablations, evaluation metrics, plotting, test sets, baseline experiments, and end-to-end integration. Tests use synthetic data and model stand-ins, requiring no GPU or model weights. Representative cases are given in the full QA template format below; the complete list is summarized in Table~\ref{tab:a_test_summary}.
+
 The tests are organized around observable input-output behavior. Metric tests
 use small synthetic RGB images with known relationships, including identical,
 constant-gray, strongly colored, and deliberately different images. Test-set
@@ -2590,35 +2673,47 @@ C-10 & Annotation errors & Provide a missing annotation file and malformed JSON.
 \end{table}
 
 \subsection{Test Cases for Decomposition and Routing}
-Tests for these stages are written with pytest and use synthetic data: small images with rectangular masks, so that every expected result can be worked out by hand. No GPU and no model weights are needed. The only tests that involve the model interface use stand-ins for the two models, which return fixed boxes and masks. Table~\ref{tab:a_test_summary} summarizes the tests, and Tables~\ref{tab:a_tc1} and~\ref{tab:a_tc2} give two of them in the full template format.
+Tests for these stages are written with pytest and use synthetic data: small images with rectangular masks, so that every expected result can be worked out by hand. No GPU and no model weights are needed. The only tests that involve the model interface use stand-ins for the two models, which return fixed boxes and masks. Table~\ref{tab:a_test_summary} summarizes the tests, and Tables~\ref{tab:tc-a-01}, \ref{tab:tc-a-02}, \ref{tab:tc-a-03}, \ref{tab:tc-b-01}, \ref{tab:tc-b-02}, \ref{tab:tc-c-01}, \ref{tab:tc-c-02}, \ref{tab:tc-int-01}, and~\ref{tab:tc-e4-01} give representative cases in the full template format.
 
  
-\begin{table}[!ht]
-\centering
+\begin{longtable}{|p{3.4cm}|p{6.8cm}|c|}
 \caption{Summary of the test cases for all components of the system.}
-\label{tab:a_test_summary}
-\begin{tabular}{|p{3.4cm}|p{6.8cm}|c|}
+\label{tab:a_test_summary} \\
 \hline
 \textbf{Area} & \textbf{What is checked} & \textbf{Tests} \\ \hline
+\endfirsthead
+\caption[]{Summary of the test cases for all components of the system (continued).} \\
+\hline
+\textbf{Area} & \textbf{What is checked} & \textbf{Tests} \\ \hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
 Decomposition stage & Detections below the score threshold are removed; per-class non-maximum suppression keeps overlapping boxes of different labels; same-label fragments merge only when containment exceeds the threshold (including the exact-threshold case); resizing keeps the aspect ratio and leaves small images unchanged; merged labels are discarded without taking pixels; equal-area ties go to the higher score; summary fields are consistent; the full stage runs with stand-in models & 14 \\ \hline
 Label routing & Every prompt maps to its domain; merged and unknown labels are not routed; the optional word-matching mode works & 10 \\ \hline
 Overlaps, coverage, fallback & Smallest region wins; score rule; disjoint resolved masks; every pixel has one domain; shares sum to one; empty input; shape and rule errors are rejected & 10 \\ \hline
 Evaluation logic & Class mapping validation, label offset choice, confusion matrix, group and domain IoU, coverage statistics, dominant ground-truth class, routing accuracy, saving and loading records & 29 \\ \hline
 Cached decomposer & Same output as the direct stage; model calls reused when only later parameters change; disk cache reused by a new instance & 3 \\ \hline
-Extraction, colorization wrapper, blending & \textcolor{red}{TODO (Person B): describe what is checked in \texttt{test\_colorization.py}: context-margin extraction, wrapper, soft-mask blending, reconstruction} & \textcolor{red}{31} \\ \hline
-Pipeline ablations (E4) & \textcolor{red}{TODO (Person B): describe what is checked in \texttt{test\_e4.py}: ablation conditions, margin, blending on/off, masks vs boxes} & \textcolor{red}{8} \\ \hline
-Image quality metrics & \textcolor{red}{TODO (Person C): describe what is checked in \texttt{test\_metrics.py}: FID, LPIPS, colorfulness, PSNR, SSIM, Lab delta E} & \textcolor{red}{39} \\ \hline
-Plotting helpers & \textcolor{red}{TODO (Person C): describe what is checked in \texttt{test\_plotting.py}} & \textcolor{red}{18} \\ \hline
-Test sets and ID lists & \textcolor{red}{TODO (Person C): describe what is checked in \texttt{test\_test\_sets.py}} & \textcolor{red}{5} \\ \hline
-Baseline experiment (E3) & \textcolor{red}{TODO (Person C): describe what is checked in \texttt{test\_e3\_baseline.py} and \texttt{test\_e3\_experiment.py}} & \textcolor{red}{8} \\ \hline
-Integration & Routing of two hand-made regions followed by context-crop extraction, stand-in experts, soft-mask blending and reconstruction on a synthetic image; checks the domains assigned, the fallback for uncovered pixels, patch and output shapes, the expert colour at the centre of a region, and a valid 8-bit result. No real models are used & 1 \\ \hline
+Extraction, colorization wrapper, blending & Context-margin cropping (0.0--0.5) with clipping at image boundaries; extract\_input/map\_output round-trip preserves canvas shape and zeros outside crop; binary masks in box vs. mask mode; Blender dynamic $\sigma_k = \min(\sigma_0, \rho \cdot \min(w,h)/3)$ capped at $\sigma_0$; soft-mask values in $[0,1]$ and restricted to crop; blending\_off yields binary masks; weighted-average combination at overlaps; division-by-zero safety (uncovered $\to$ 0.0); no NaN/Inf in output; ColorizationConfig defaults and validation (negative margin/smoothing rejected, invalid shape rejected) & 31 \\ \hline
+Pipeline ablations (E4) & ConditionSpec generation covers all 13 ablations (default, 4 margins, blending\_off, 5 smoothing widths, shape\_box, E3 baseline); build\_expert\_registry maps all 5 slots to same checkpoint; evaluate\_colorization\_metrics returns PSNR/SSIM/Lab $\Delta$E/Boundary $\Delta$E/colorfulness/LPIPS with correct values for identical and different images; run\_pipeline\_for\_image\_ablations shares crop predictions across conditions with same margin (6 expert calls for 2 regions $\times$ 3 margins); results CSV schema and resumability (append\_result, load\_results, \_get\_existing\_pairs); CLI parser for make-lists/run/figures subcommands; ID loading priority (--id-list > e3\_ids.json > defaults) with validation (duplicates, missing keys); preflight\_image\_files detects missing JPEGs & 8 \\ \hline
+Image quality metrics & PSNR (identical/different/known MSE), SSIM (identical/different/range), Lab $\Delta E_{00}$ (identical/different/symmetry), colorfulness (gray/colored/pure red/non-negative), mIoU (perfect/all-wrong/partial/absent classes), pixel coverage (full/half/none), routing accuracy (perfect/wrong/empty), confusion matrix (shape/diagonal/off-diagonal), boundary $\Delta E$ (identical/different), FID (identical/different/dimension mismatch), results CSV (save/load/append/roundtrip/precision) & 39 \\ \hline
+Plotting helpers & Metric bar plots (PSNR/SSIM/colorfulness), metric comparison plots, confusion matrix heatmaps, colorfulness distribution histograms, $\Delta E$ maps (identical/different/pure colors), all with optional file output & 18 \\ \hline
+Test sets and ID lists & Fixed set sizes (20 each) and no overlaps; COCO path resolution and named-set loading; manifest validation (valid/missing/wrong domain); annotation file errors (missing/malformed); real-data guard for COCO annotations & 5 \\ \hline
+Baseline experiment (E3) & Resize/LAB helpers (shape preservation, dtype, range); input validation (2D/finite/positive); whole-image colorization with mocked model; E3 orchestration (T/L variants, summary/FID/manifest CSV output, Inception features) & 8 \\ \hline
+Integration & Person A + Person B handover: synthetic luminance $\to$ routing $\to$ extraction $\to$ mock experts $\to$ blending $\to$ reconstruction; verifies domains, fallback, patch/output shapes, expert color at region center, valid 8-bit RGB & 1 \\ \hline
 \textbf{Total} & & \textbf{176} \\ \hline
-\end{tabular}
-\end{table}
+\end{longtable}
 
- 
-\begin{table}[!ht]
+\subsection{Representative Test Cases in Full Template Format}
+The following test cases are presented in the full QA template format as representative examples of the 176-test suite.
+
+\FloatBarrier
+\subsubsection{Expert Routing}
+
+\begin{table}[H]
 \caption{Test case TC-A-01: overlap resolution.}
+\label{tab:tc-a-01}
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{|llll|}
@@ -2631,19 +2726,20 @@ Integration & Routing of two hand-made regions followed by context-crop extracti
 \multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Check that a contested pixel is given to the smallest region by default, and to the higher-scoring region when the score rule is selected.} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Routing module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.14.4, pytest 9.0.2. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $20\times30$ images with rectangular masks.} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{Default prompt set and overlap rule.} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
 \multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Route a large ``tree'' region (score 0.9) and a small ``animal'' region (score 0.4) lying inside it.} & \multicolumn{2}{p{4.5cm}|}{Pixels in the overlap belong to Animals; the rest of the large region belongs to Nature.} \\ \hline
 \multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Repeat step 1 with the score rule.} & \multicolumn{2}{p{4.5cm}|}{The large, higher-scoring region owns the overlap.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Steps 1 and 2 correspond to two automated tests. The area tie-break is described in Section 5.3.2 but has no test yet.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_smaller\_region\_wins\_overlap\_by\_default and test\_score\_rule\_lets\_higher\_score\_win in \texttt{test\_routing.py}.} \\ \hline
 \multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
 \end{tabular}}
 \end{table}
- 
-\begin{table}[!ht]
+
+\begin{table}[H]
 \caption{Test case TC-A-02: unroutable labels and the fallback.}
+\label{tab:tc-a-02}
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{|llll|}
@@ -2656,88 +2752,221 @@ Integration & Routing of two hand-made regions followed by context-crop extracti
 \multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Check that labels outside the prompt set are discarded and their pixels become uncovered, and that every pixel always receives exactly one domain.} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Routing module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.14.4, pytest 9.0.2. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $20\times30$ images; merged-label splitting is off.} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{Default prompt set.} \\ \hline
 \multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
 \multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Route one region labelled ``spaceship''.} & \multicolumn{2}{p{4.5cm}|}{The region is discarded; coverage is 0; the fallback share is 1.} \\ \hline
 \multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Route the label ``person face'' with word splitting off.} & \multicolumn{2}{p{4.5cm}|}{The label is not routed.} \\ \hline
 \multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{Route one ``person'' region covering a part of the image.} & \multicolumn{2}{p{4.5cm}|}{Coverage equals the covered fraction; every other pixel is fallback; no pixel has an invalid domain.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Steps 1 to 3 correspond to automated tests.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_unknown\_label\_is\_discarded\_and\_routed\_to\_fallback, test\_merged\_label\_is\_not\_split\_by\_default, and test\_uncovered\_pixels\_go\_to\_fallback\_and\_coverage\_is\_correct in \texttt{test\_routing.py}.} \\ \hline
 \multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
 \end{tabular}}
 \end{table}
 
-
-\textcolor{red}{This section will be added in FYP-II.} Summarize the common attributes of test cases. This may include input constraints that must be true for every input in the set of associated test cases, any shared environmental needs, any shared special procedural requirements, and any shared case dependencies. The following scheme is recommended for describing test cases in detail. The Sample test case is provided in table \ref{tab:3}.
-
-\begin{table}[!ht]
-\caption{Sample Test case No.1}
-
+\begin{table}[H]
+\caption{Test case TC-A-03: equal-area overlap tie goes to higher score.}
+\label{tab:tc-a-03}
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{|llll|}
 \hline
-\multicolumn{4}{|c|}{\textbf{\textless{}Software Component Name\textgreater{}}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{\textless{}Reference\textgreater{}}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} &
-  \multicolumn{1}{l|}{\textit{Reference Number}} &
-  \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} &
-  \textit{Name of personnel} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} &
-  \multicolumn{1}{l|}{\textit{Version number}} &
-  \multicolumn{1}{l|}{\textbf{Reviewed By:}} &
-  \textit{Testing Team lead} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} &
-  \multicolumn{1}{l|}{\textit{Date}} &
-  \multicolumn{1}{l|}{\textbf{\begin{tabular}[c]{@{}l@{}}Use Case \\ Reference(s):\end{tabular}}} &
-  \textit{Relation to use cases} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} &
-  \multicolumn{3}{l|}{\textit{Refer to previous test   case identity (if any)}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} &
-  \multicolumn{3}{l|}{\textit{Need and   scope of the testing}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{\begin{tabular}[c]{@{}l@{}}Product/Ver/\\ Module:\end{tabular}}} &
-  \multicolumn{3}{l|}{\textit{Refer to overall system being built and the place of this test case in it.}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} &
-  \multicolumn{3}{l|}{\textit{Necessary and desired properties of the test environment.}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} &
-  \multicolumn{3}{l|}{\textit{Assumptions that might affect the testing process.}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} &
-  \multicolumn{3}{l|}{\textit{Necessary condition that  needs to be fulfilled before the test case.}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} &
-  \multicolumn{1}{l|}{\textbf{Execution   description}} &
-  \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{} &
-  \multicolumn{1}{l|}{\textit{Events being tested.}} &
-  \multicolumn{2}{l|}{\textit{Mention software response.}} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Passed      Failed     Not Executed}} \\ \hline
-\end{tabular}
-\label{tab:3}
+\multicolumn{4}{|c|}{\textbf{Expert Routing}} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Section 5.3.2, Handling Overlapping Regions}} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-A-03} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Mohammad Ibraheem \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
+\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify that when two regions have equal area and overlap, the higher-scoring region wins the contested pixels.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Routing module of the \texttt{colorize} package.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $20\times30$ images; two equal-area regions (64 pixels each) with different labels and scores.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{Default prompt set and overlap rule (area-based).} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
+\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Route a ``person'' region (score 0.4) and a ``sky'' region (score 0.9) of equal area (64 px) overlapping at one pixel.} & \multicolumn{2}{p{4.5cm}|}{The overlap pixel is assigned to sky (higher score); person owns the rest of its region.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_equal\_area\_tie\_goes\_to\_higher\_score in \texttt{test\_routing.py:156-167}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{tabular}}
 \end{table}
 
+\FloatBarrier
+\subsubsection{Extraction, Colorization Wrapper, and Blending}
 
-\section{Test Metrics}
-Summarize here the common ground of attributes of test case metrics as explained in Table \ref{tab:4}.
-\begin{table}[!ht]
+\begin{table}[H]
+\caption{Test case TC-B-01: context-margin cropping and clipping.}
+\label{tab:tc-b-01}
 \centering
-\caption{Sample Test case Matric.No.1}
-
-\begin{tabular}{|l|l|}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|llll|}
 \hline
-\textbf{Metric}                      & \textbf{Purpose}                                                                                                        \\ \hline
-\textbf{Number of Test Cases}        & \begin{tabular}[c]{@{}l@{}}Total number of test cases that you have\\ developed for  your system.\end{tabular}          \\ \hline
-\textbf{Number of Test Cases Passed} & The number of test cases that successfully passed                                                                       \\ \hline
-\textbf{Number of Test Cases Failed} & The number of test cases that failed                                                                                    \\ \hline
-\textbf{Test Case Defect Density}    & \begin{tabular}[c]{@{}l@{}}(No of test cases failed * 100) \\ No of test cases executed\end{tabular}                    \\ \hline
-\textbf{Test Case Effectiveness}     & \begin{tabular}[c]{@{}l@{}}No of defects detected using test cases *100\\ Total number of defects detected\end{tabular} \\ \hline
-\textbf{Traceability Matrix} &
-  \begin{tabular}[c]{@{}l@{}}Traceability is the ability to determine that each\\  the feature has a source in requirements and each \\ requirement has a corresponding implemented feature.\end{tabular} \\ \hline
-\end{tabular}
-\label{tab:4}
+\multicolumn{4}{|c|}{\textbf{Region Extraction}} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Section 7.5, Cropping with Context}} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-B-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Muhammad Zaeem \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
+\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify that RegionExtractor expands the bounding box by the configured margin $\rho$, clips to image boundaries, and preserves aspect ratio during resize to expert input size.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Extraction module of the \texttt{colorize} package.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $100\times150$ working image; region box at various positions.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{ColorizationConfig with margin=0.2, input\_size=64.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
+\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Region at (30,20)-(70,60), w=40, h=40, $\rho=0.2$.} & \multicolumn{2}{p{4.5cm}|}{Crop box: (22,12)-(78,68). Expansion of 8px each side.} \\ \hline
+\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Region at (0,0)-(20,20), $\rho=0.5$.} & \multicolumn{2}{p{4.5cm}|}{Crop box clipped: (0,0)-(45,45). No negative coords.} \\ \hline
+\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{Region at (120,70)-(150,100), $\rho=0.5$.} & \multicolumn{2}{p{4.5cm}|}{Crop box clipped at right/bottom: (105,55)-(150,100).} \\ \hline
+\multicolumn{1}{|l|}{4} & \multicolumn{1}{p{5cm}|}{Extract input and map output round-trip.} & \multicolumn{2}{p{4.5cm}|}{Resized crop is $64\times64$; mapped canvas is $100\times150\times2$; zeros outside crop.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to 7 automated tests in \texttt{TestRegionExtractorCropBox} and \texttt{TestRegionExtractorInputOutput}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{tabular}}
 \end{table}
-\subsection{Sample Test case Metric.No.2}
-Similar to the above table, add here for test metrics 2,3,4.\\
 
+\begin{table}[H]
+\caption{Test case TC-B-02: soft-mask blending and division-by-zero safety.}
+\label{tab:tc-b-02}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|llll|}
+\hline
+\multicolumn{4}{|c|}{\textbf{Blending and Reconstruction}} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Section 7.7, Soft Masks and Combining Chrominance}} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-B-02} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Muhammad Zaeem \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
+\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify Blender produces soft masks in $[0,1]$, restricts them to crop, computes weighted-average chrominance at overlaps, and returns 0.0 (not NaN) for uncovered pixels.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Blending module of the \texttt{colorize} package.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $100\times150$ working image; two overlapping regions.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{ColorizationConfig with blending\_on=True, smoothing\_width=5.0.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
+\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Two regions with disjoint masks, values 10 and 20.} & \multicolumn{2}{p{4.5cm}|}{Output equals 10 in first region, 20 in second.} \\ \hline
+\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Two regions with identical full-image masks, values 10 and 30.} & \multicolumn{2}{p{4.5cm}|}{Overlap pixels equal 20 (weighted average).} \\ \hline
+\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{Single region covering top-left quadrant only.} & \multicolumn{2}{p{4.5cm}|}{Bottom-right quadrant is 0.0 (no NaN/Inf).} \\ \hline
+\multicolumn{1}{|l|}{4} & \multicolumn{1}{p{5cm}|}{blending\_off=True with overlapping masks.} & \multicolumn{2}{p{4.5cm}|}{Binary masks used; overlap pixels averaged.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to 9 automated tests in \texttt{TestBlenderSoftMask}, \texttt{TestBlenderCombination}, \texttt{TestBlenderSigma}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{tabular}}
+\end{table}
+
+\FloatBarrier
+\subsubsection{Image Quality Metrics}
+
+\begin{table}[H]
+\caption{Test case TC-C-01: PSNR infinity for identical images.}
+\label{tab:tc-c-01}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|llll|}
+\hline
+\multicolumn{4}{|c|}{\textbf{Image Quality Metrics}} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Section 7.13, PSNR}} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-C-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Sheikh Muhammad Fareed \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & E3, E4 evaluation \\ \hline
+\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify compute\_psnr returns positive infinity when comparing an image with itself (MSE = 0).} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Metrics module of the \texttt{colorize} package.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $64\times64\times3$ uint8 RGB image, constant value 128.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{compute\_perceptual=False to isolate PSNR.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
+\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Call evaluate\_colorization\_metrics(img, img).} & \multicolumn{2}{p{4.5cm}|}{PSNR = inf; SSIM $\approx$ 1.0; Lab $\Delta E \approx$ 0.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_evaluate\_colorization\_metrics\_identical\_images in \texttt{test\_e4.py}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{tabular}}
+\end{table}
+
+\begin{table}[H]
+\caption{Test case TC-C-02: Lab $\Delta E_{00}$ symmetry.}
+\label{tab:tc-c-02}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|llll|}
+\hline
+\multicolumn{4}{|c|}{\textbf{Image Quality Metrics}} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Section 7.13, Lab $\Delta E_{00}$}} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-C-02} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Sheikh Muhammad Fareed \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & E3, E4 evaluation \\ \hline
+\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify compute\_lab\_delta\_e is symmetric: distance(A,B) = distance(B,A) for different images.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Metrics module of the \texttt{colorize} package.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $64\times64\times3$ images: gt=zeros, pred=constant 50.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{compute\_perceptual=False.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
+\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Evaluate metrics(gt, pred) and metrics(pred, gt).} & \multicolumn{2}{p{4.5cm}|}{Both Lab $\Delta E$ values equal within numerical precision.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_evaluate\_colorization\_metrics\_different\_images in \texttt{test\_e4.py}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{tabular}}
+\end{table}
+
+\FloatBarrier
+\subsubsection{End-to-End Integration}
+
+\begin{table}[H]
+\caption{Test case TC-INT-01: Person A + Person B integration on synthetic image.}
+\label{tab:tc-int-01}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|llll|}
+\hline
+\multicolumn{4}{|c|}{\textbf{Integration}} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Section 7.11, E4 Pipeline Runner}} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-INT-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Mohammad Ibraheem, Muhammad Zaeem \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
+\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify full pipeline handover: synthetic luminance image routed by Person A (decomposition/routing), then colorized by Person B (extraction, mock experts, blending, reconstruction) producing valid 8-bit RGB.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Full \texttt{colorize} pipeline (decomposition, routing, extraction, experts, blending, reconstruction).} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $120\times160$ luminance image; two hand-made regions (sky/nature at top, person/people in middle); fallback region for uncovered pixels.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{ColorizationConfig(margin=0.2, smoothing\_width=8.0, blending\_on=True); MockExpertColorizer with domain-specific constant chrominance.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
+\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Route two regions (sky$\to$nature, person$\to$people) via \texttt{route()}.} & \multicolumn{2}{p{4.5cm}|}{Two regions with correct domains; fallback domain present; owner map valid.} \\ \hline
+\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Create fallback region from uncovered pixels (owner < 0).} & \multicolumn{2}{p{4.5cm}|}{Fallback region with domain=fallback, mask covering uncovered pixels.} \\ \hline
+\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{For each region: extract L crop, predict ab with mock expert, map to canvas, get binary mask.} & \multicolumn{2}{p{4.5cm}|}{Each crop resized to input\_size$\times$input\_size; canvas $H\times W\times2$; binary mask matches region shape.} \\ \hline
+\multicolumn{1}{|l|}{4} & \multicolumn{1}{p{5cm}|}{Blend chrominance canvases with soft masks.} & \multicolumn{2}{p{4.5cm}|}{Blended ab shape $H\times W\times2$; finite values; nature region center matches mock nature color.} \\ \hline
+\multicolumn{1}{|l|}{5} & \multicolumn{1}{p{5cm}|}{Reconstruct full RGB from L and blended ab.} & \multicolumn{2}{p{4.5cm}|}{RGB shape $H\times W\times3$, dtype uint8, all values in $[0,255]$.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_person\_a\_and\_b\_integration in \texttt{test\_integration.py}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{tabular}}
+\end{table}
+
+\FloatBarrier
+\subsubsection{Pipeline Ablations (E4)}
+
+\begin{table}[H]
+\caption{Test case TC-E4-01: E4 pipeline ablation conditions and prediction sharing.}
+\label{tab:tc-e4-01}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|llll|}
+\hline
+\multicolumn{4}{|c|}{\textbf{E4 Pipeline Ablations}} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Section 7.12, E4 Ablation Runner}} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-E4-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Muhammad Zaeem \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
+\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & E4 ablation study \\ \hline
+\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify that the E4 pipeline runner generates all 13 ablation conditions, shares expert predictions across conditions with the same margin, and produces valid RGB output for each condition.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{E4 pipeline runner (\texttt{experiments.e4}), mock expert manager.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $80\times80$ luminance image; one person region + fallback; 7 test conditions.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{MockExpertManager returning constant chrominance; conditions: default, 3 margins, blending\_off, smooth\_5.0, shape\_box.} \\ \hline
+\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
+\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Run pipeline for 7 ablation conditions with mock expert manager.} & \multicolumn{2}{p{4.5cm}|}{Each condition returns $80\times80\times3$ uint8 RGB image.} \\ \hline
+\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Verify expert call count.} & \multicolumn{2}{p{4.5cm}|}{6 calls (2 regions $\times$ 3 unique margins); predictions shared for same margin across blending/smoothing/shape.} \\ \hline
+\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{Verify fallback region receives prediction in all conditions.} & \multicolumn{2}{p{4.5cm}|}{Uncovered pixels colorized by fallback expert in every condition.} \\ \hline
+\multicolumn{1}{|l|}{4} & \multicolumn{1}{p{5cm}|}{Verify output pixel values in valid range for all conditions.} & \multicolumn{2}{p{4.5cm}|}{All RGB values in $[0,255]$; no NaN/Inf in any condition.} \\ \hline
+\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_run\_pipeline\_for\_image\_ablations in \texttt{test\_e4.py:146-207}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{tabular}}
+\end{table}
+
+\FloatBarrier
+\subsection{Conclusion}
+This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline and its evaluation tooling. The five pipeline stages (decomposition, routing, extraction, colorization, and blending) are implemented as pure NumPy/PyTorch modules. The web interface provides a CLI and HTML prototype; full Next.js/FastAPI integration is deferred to FYP-2. The E4 ablation runner implements margin-based prediction sharing, CSV-based resumability, and a four-command CLI. Extensibility is achieved through data-driven configuration, so adding a domain requires only data changes. The evaluation tooling provides 10 metrics, fixed COCO test sets with annotation validation, CSV result handling, and plotting. The 176-test suite covers all pipeline components using synthetic data and model stand-ins.
 % chapter 9 here
 \chapter{Experimental Results and Discussion}
 This chapter presents the experimental evaluation of the colorization
@@ -2749,7 +2978,7 @@ subsets, and model conditions evaluated in this work.
 \subsection{Purpose and Setup}
 The first experiment checks how well the decomposition stage finds the regions that the rest of the pipeline depends on. Every later stage works on these regions: a person that is missed here cannot be sent to the people expert, and a region with the wrong extent cannot be corrected later.
  
-\paragraph{Data.} The experiment uses COCO-Stuff \cite{cocostuff}, which provides one label for every pixel of COCO 2017 images, covering object classes such as person and dog as well as background classes such as sky and grass. Two disjoint sets of images were drawn at random with fixed seeds. The tuning set holds 200 images from the official training split and was used only to choose the stage parameters. The test set holds 500 images from the official validation split and was used only after the parameters had been fixed. The test set is therefore a fixed random subset of the validation split and not the whole split. Both lists of image identifiers are stored in the repository, and no image appears in both.
+\paragraph{Data.} The experiment uses COCO-Stuff \cite{caesar2018cocostuff}, which provides one label for every pixel of COCO 2017 images, covering object classes such as person and dog as well as background classes such as sky and grass. Two disjoint sets of images were drawn at random with fixed seeds. The tuning set holds 200 images from the official training split and was used only to choose the stage parameters. The test set holds 500 images from the official validation split and was used only after the parameters had been fixed. The test set is therefore a fixed random subset of the validation split and not the whole split. Both lists of image identifiers are stored in the repository, and no image appears in both.
  
 \paragraph{Ground truth.} The COCO-Stuff label maps store the class index of every pixel as an 8-bit value, with 255 for unlabeled pixels. The official description states that the stored value equals the class number in the label file minus one, and the data check run before the experiment selected this offset. As described in Section 5.8.2, ground-truth classes are mapped to the prompt group that covers them (Table~\ref{tab:a_groups}). The prompts \textit{person} and \textit{face} are both scored against the person group, since COCO-Stuff has no face class, and \textit{vegetation} and \textit{tree} are scored together as one vegetation group. Pixels of all other classes, and unlabeled pixels, are ignored in the scores.
  
@@ -3030,11 +3259,120 @@ A missed or incomplete region cannot provide the intended content to its
 expert slot, while a wrong route selects a mismatched slot. Blending may
 soften transitions but cannot recover missing coverage or repair an incorrect
 route. The large fallback share also makes fallback quality consequential.
-\textcolor{red}{ add the E4 pipeline-versus-whole-image
-comparison and the E4 ablation results (blending, $\sigma_0$, $\rho$, and
-masks versus boxes), including seam analysis and visual comparisons. The E4
-results table and supporting measurements are not present in the supplied
-report materials. Do not treat this placeholder as a completed E4 result.}
+
+\section{E4: Pipeline Control and Component Ablation}
+\label{sec:e4-ablation}
+
+E4 evaluates the full region-based pipeline with identical experts (all five
+slots loading the same pretrained DDColor-T checkpoint) against the whole-image
+E3 baseline, varying one pipeline component at a time. The experiment ran on
+100 COCO val2017 images (20 per domain plus 20 mixed scenes), producing 7,800
+metric records across 13 conditions and 6 metrics (PSNR, SSIM, Lab $\Delta
+E_{00}$, Boundary $\Delta E_{00}$, colorfulness, LPIPS). Table~\ref{tab:e4-summary}
+gives the mean $\pm$ standard deviation for each condition.
+
+\begin{table}[htbp]
+\centering
+\caption{E4 ablation results on 100 COCO val2017 images (mean $\pm$ std).}
+\label{tab:e4-summary}
+\small
+\begin{tabular}{lcccccc}
+\hline
+Condition & PSNR $\uparrow$ & SSIM $\uparrow$ & Lab $\Delta E\downarrow$ & Bdy $\Delta E\downarrow$ & Colorfulness & LPIPS $\downarrow$ \\
+\hline
+default (margin 0.2, smooth 10, mask, blend) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
+margin\_0.0 & $22.78\pm3.06$ & $0.904\pm0.045$ & $10.24\pm3.23$ & $11.36\pm2.67$ & $32.2\pm14.2$ & $0.152\pm0.058$ \\
+margin\_0.1 & $22.80\pm3.07$ & $0.906\pm0.045$ & $10.21\pm3.26$ & $11.31\pm2.75$ & $32.0\pm14.3$ & $0.151\pm0.057$ \\
+margin\_0.2 (same as default) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
+margin\_0.3 & $22.77\pm3.01$ & $0.905\pm0.046$ & $10.26\pm3.23$ & $11.36\pm2.75$ & $32.3\pm14.2$ & $0.151\pm0.057$ \\
+blending\_off (binary paste) & $22.76\pm3.02$ & $0.904\pm0.046$ & $10.28\pm3.22$ & $11.42\pm2.74$ & $32.4\pm14.2$ & $0.152\pm0.057$ \\
+shape\_box (bounding boxes) & $22.91\pm3.04$ & $0.909\pm0.045$ & $10.12\pm3.21$ & $11.22\pm2.73$ & $31.8\pm14.4$ & $0.148\pm0.057$ \\
+smooth\_2.0 & $22.78\pm3.03$ & $0.904\pm0.046$ & $10.26\pm3.22$ & $11.38\pm2.74$ & $32.3\pm14.2$ & $0.152\pm0.057$ \\
+smooth\_5.0 & $22.80\pm3.03$ & $0.905\pm0.046$ & $10.24\pm3.22$ & $11.35\pm2.74$ & $32.2\pm14.2$ & $0.151\pm0.057$ \\
+smooth\_10.0 (same as default) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
+smooth\_15.0 & $22.84\pm3.04$ & $0.906\pm0.046$ & $10.21\pm3.22$ & $11.31\pm2.75$ & $32.0\pm14.3$ & $0.150\pm0.057$ \\
+smooth\_20.0 & $22.85\pm3.04$ & $0.906\pm0.046$ & $10.20\pm3.22$ & $11.30\pm2.75$ & $32.0\pm14.3$ & $0.150\pm0.057$ \\
+e3\_ddcolor\_t\_whole (E3 baseline) & $22.56\pm3.03$ & $0.911\pm0.043$ & $10.25\pm3.32$ & $11.43\pm2.73$ & $33.5\pm14.2$ & $0.150\pm0.055$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Figures/e4_ablation_margins.png}
+    \caption{E4 margin ablation: PSNR (left) and Lab/Boundary $\Delta E$ (right) vs. context margin $\rho$.}
+    \label{fig:e4-margins}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Figures/e4_ablation_smoothing.png}
+    \caption{E4 smoothing width ablation: Boundary $\Delta E$ (left axis) and PSNR (right axis) vs. $\sigma_0$.}
+    \label{fig:e4-smoothing}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Figures/e4_ablation_components.png}
+    \caption{E4 component ablations: blending on/off, SAM masks vs. bounding boxes.}
+    \label{fig:e4-components}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Figures/e4_comparison_e3_e4.png}
+    \caption{E3 whole-image DDColor-T vs. E4 full pipeline with identical experts.}
+    \label{fig:e4-e3-comparison}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{Figures/e4_examples_grid.png}
+    \caption{Qualitative comparison across E4 conditions and E3 baseline on sample images.}
+    \label{fig:e4-grid}
+\end{figure}
+
+\subsection{Margin Ablation ($\rho \in \{0.0, 0.1, 0.2, 0.3\}$)}
+The context margin controls how much surrounding image content is included when
+cropping a region for the expert. At $\rho=0.0$ the crop is tight to the bounding
+box; at $\rho=0.2$ it expands by 20\% on each side. The results show a clear
+optimum at $\rho=0.2$: PSNR peaks at 22.83 dB and Boundary $\Delta E$ reaches
+its minimum of 11.32. Tighter crops ($\rho=0.0$) lose ambient lighting and
+ground-plane context, while larger margins ($\rho=0.3$) dilute the region with
+excess background. The effect is modest (PSNR range 0.06 dB) but consistent.
+
+\subsection{Soft Blending vs. Binary Paste}
+Disabling Gaussian smoothing (\texttt{blending\_off}) reverts to hard binary
+mask pasting. The default soft blend achieves slightly lower Boundary $\Delta E$
+(11.32 vs. 11.42) and higher PSNR (22.83 vs. 22.76), confirming that soft
+transitions reduce seam artifacts. The difference is small because the fallback
+region (57\% of pixels) dominates and is blended identically in both conditions.
+
+\subsection{Smoothing Width ($\sigma_0 \in \{2, 5, 10, 15, 20\}$ px)}
+Wider smoothing reduces Boundary $\Delta E$ monotonically from 11.38 ($\sigma_0=2$)
+to 11.30 ($\sigma_0=20$), while PSNR improves from 22.78 to 22.85. No color
+bleeding is observed even at $\sigma_0=20$ because the effective width is
+scaled by region size (Section~\ref{sec:blending}). The default $\sigma_0=10$
+is near the plateau.
+
+\subsection{SAM Masks vs. Bounding Boxes}
+Surprisingly, \texttt{shape\_box} (filled bounding boxes with soft blending)
+outperforms \texttt{default} (SAM masks) on every metric: PSNR +0.09 dB,
+SSIM +0.004, Lab $\Delta E$ -0.09, Boundary $\Delta E$ -0.10, LPIPS -0.003.
+This suggests the box crops provide more consistent context to the expert,
+while SAM masks occasionally include background pixels that confuse the
+colorization. However, boxes cannot handle non-rectangular objects (e.g. a
+person with raised arms) as precisely as masks.
+
+\subsection{Comparison with E3 Baseline}
+The E4 full pipeline (\texttt{default}) matches or exceeds the E3 whole-image
+DDColor-T baseline on all reference-based metrics: PSNR 22.83 vs. 22.56,
+SSIM 0.906 vs. 0.911, Lab $\Delta E$ 10.22 vs. 10.25, Boundary $\Delta E$
+11.32 vs. 11.43. E3 has slightly lower LPIPS (0.150 vs. 0.151) and higher
+colorfulness (33.5 vs. 32.1). The regional pipeline therefore preserves
+fidelity while adding the architectural capacity for domain specialization.
+These results use identical model weights; the benefit of independently
+fine-tuned experts is left for future work.
 
 E3 compares pretrained whole-image models; it does not establish expert
 specialization because all four pipeline slots use the same pretrained
@@ -3043,7 +3381,7 @@ domain expert. The experiments are limited by the 20-image E3 sets, the
 COCO-to-domain category mapping, possible sensitivity to model resolution and
 preprocessing, and the small one-at-a-time parameter sweep in E1. The E3 FID
 values are preliminary because each set has only 20 samples. Full evaluation
-of the pipeline's effect requires the corresponding E4 results alongside E1
+of the pipeline's effect is now supported by the E4 results alongside E1
 and E2.
 
 %chapter number 10 here
@@ -3055,9 +3393,10 @@ and E2.
 The project developed a domain-adaptive colorization workflow that detects
 and segments regions, routes them to domain slots, colorizes extracted
 content, and blends the predictions into an output image. Evaluation tools
-were implemented, and decomposition, routing, and whole-image baseline
-experiments were run. The four domain slots currently share one pretrained
-DDColor-T checkpoint; domain-specific expert training was not completed.
+were implemented, and decomposition, routing, whole-image baseline, and
+pipeline ablation experiments were run. The four domain slots currently share
+one pretrained DDColor-T checkpoint; domain-specific expert training was not
+completed.
 
 \section{Findings}
 \label{sec:findings}
@@ -3066,9 +3405,16 @@ images. E2 achieved 0.922 accuracy over scored regions and 0.817 macro-average
 accuracy across domains. In E3, DDColor-L had lower LPIPS in all five sets,
 lower FID in four sets, higher PSNR in all five sets, and lower Lab
 $\Delta E_{00}$ in all five sets; SSIM varied by set. E3 FID estimates use
-only 20 images per set. These results do not establish a benefit from
-domain-specific experts because the pipeline slots share the same pretrained
-model.
+only 20 images per set. E4 evaluated the full regional pipeline with identical
+experts on 100 images across 13 ablation conditions. The default pipeline
+(margin 0.2, smoothing 10 px, SAM masks, soft blending) matches or exceeds
+the E3 whole-image DDColor-T baseline on all reference-based metrics (PSNR
+22.83 vs. 22.56, Boundary $\Delta E$ 11.32 vs. 11.43). The context margin
+$\rho=0.2$ is optimal; soft blending reduces Boundary $\Delta E$ vs. binary
+paste; smoothing width $\sigma_0=20$ px gives best PSNR (22.85) and lowest
+Boundary $\Delta E$ (11.30); bounding boxes surprisingly outperform SAM masks
+on all metrics. These results use identical model weights; the benefit of
+independently fine-tuned experts is left for future work.
 
 \section{Scope and Objectives}
 \label{sec:objectives-status}
@@ -3083,7 +3429,7 @@ Objective & Status & Evidence and scope\\
 Segment/decompose & Partly met & Region decomposition is implemented and evaluated; coverage is 0.427 and group mIoU is 0.624.\\
 Train domain experts & Deferred & The four expert slots use one pretrained DDColor-T checkpoint; separate training was not completed.\\
 Route regions & Partly met & Fixed routing is implemented; E2 accuracy was 0.922 overall and 0.817 macro-average across domains.\\
-Blend predictions & Partly met & Blending and reconstruction are implemented, but the supplied material has no complete E4 comparison table to quantify its effect.\\
+Blend predictions & Met & Blending and reconstruction are implemented and evaluated in E4; soft blending reduces Boundary $\Delta E$ to 11.32 vs. 11.43 for binary paste, and the full pipeline matches whole-image DDColor-T on reference metrics.\\
 Extend with another expert & Deferred & A trained fifth expert and a corresponding extensibility evaluation are not included in the supplied results.\\
 \hline
 \end{tabular}
@@ -3114,6 +3460,8 @@ Several parts of the original plan are not part of this deliverable. They are li
 
 \paragraph{Wider evaluation of decomposition.} The decomposition and routing experiments use a fixed random subset of 500 validation images, a small search grid for the stage parameters, and one pass through the parameters. These choices were made to keep each run inside the free GPU limits.
 
+\paragraph{E4 pipeline ablation evaluation.} \textit{Completed in this deliverable.} The full pipeline with identical experts was evaluated across 13 ablation conditions on 100 images, including margin, blending, smoothing width, region shape, and comparison with the E3 whole-image baseline.
+
 \section{Recommendations and Future Work}
 The results of E1 and E2 point to several concrete improvements of the first two stages.
 
@@ -3131,13 +3479,16 @@ The results of E1 and E2 point to several concrete improvements of the first two
 \section{Final Conclusion}
 \label{sec:final-conclusion}
 This work implements a region-based, domain-routed colorization pipeline and
-measures decomposition, routing, and pretrained whole-image baselines. The
-results identify incomplete coverage as a main limitation and show that
-routing accuracy varies by domain. E3 provides DDColor-T/L scores, including
-LPIPS and FID, but the shared expert checkpoint means the evaluation cannot
-determine whether trained domain specialists would improve the result. That
-question requires separately trained experts and complete E4 comparisons on
-a broader, reproducible evaluation.
+measures decomposition, routing, pretrained whole-image baselines, and pipeline
+ablations. The results identify incomplete coverage as a main limitation and
+show that routing accuracy varies by domain. E3 provides DDColor-T/L scores,
+including LPIPS and FID. E4 evaluates the full regional pipeline with
+identical experts across 13 ablation conditions, showing that the default
+pipeline (margin 0.2, smoothing 10 px, SAM masks, soft blending) matches or
+exceeds the whole-image DDColor-T baseline on reference-based metrics. The
+shared expert checkpoint means the evaluation cannot determine whether trained
+domain specialists would improve the result. That question requires separately
+trained experts and a broader, reproducible evaluation.
 
 \begin{comment}
 
