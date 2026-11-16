@@ -1,11 +1,17 @@
 \documentclass{FastFyp}
+\usepackage{amsmath}
+\usepackage{xcolor}
 \usepackage{longtable}
 \usepackage{array}
+\usepackage{needspace}
 \usepackage{url}
 \usepackage{graphicx}
 \usepackage{comment}
 \usepackage{float}
 \usepackage{placeins}
+\usepackage{tabularx}
+\usepackage{seqsplit}
+\newcommand{\tcbrk}[1]{\seqsplit{#1}}
 \begin{document}
 \newcommand{\supervisor}{Junaid Hussain Muzamal}
 \newcommand{\university}{National University of Computer and Emerging Sciences, Lahore}
@@ -2709,260 +2715,281 @@ Integration & Person A + Person B handover: synthetic luminance $\to$ routing $\
 The following test cases are presented in the full QA template format as representative examples of the 176-test suite.
 
 \FloatBarrier
+\clearpage
 \subsubsection{Expert Routing}
+% ---- Layout helpers for the test case tables (define once) ----
+\providecommand{\tcW}{\dimexpr\textwidth-8\tabcolsep-5\arrayrulewidth\relax}
+\providecommand{\tcA}{\dimexpr\tcW*21/100\relax}
+\providecommand{\tcB}{\dimexpr\tcW*23/100\relax}
+\providecommand{\tcC}{\dimexpr\tcW*20/100\relax}
+\providecommand{\tcD}{\dimexpr\tcW*36/100\relax}
+\providecommand{\tcSpanBC}{\dimexpr\tcB+\tcC+2\tabcolsep+\arrayrulewidth\relax}
+\providecommand{\tcSpanBCD}{\dimexpr\tcB+\tcC+\tcD+4\tabcolsep+2\arrayrulewidth\relax}
+\providecommand{\tcSpanAll}{\dimexpr\tcA+\tcB+\tcC+\tcD+6\tabcolsep+3\arrayrulewidth\relax}
+% ---------------------------------------------------------------
 
-\begin{table}[H]
-\caption{Test case TC-A-01: overlap resolution.}
-\label{tab:tc-a-01}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-A-01: overlap resolution.}\label{tab:tc-a-01} \\*
 \hline
-\multicolumn{4}{|c|}{\textbf{Expert Routing}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Section 5.3.2, Handling Overlapping Regions}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-A-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Mohammad Ibraheem \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Check that a contested pixel is given to the smallest region by default, and to the higher-scoring region when the score rule is selected.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Routing module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $20\times30$ images with rectangular masks.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{Default prompt set and overlap rule.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Route a large ``tree'' region (score 0.9) and a small ``animal'' region (score 0.4) lying inside it.} & \multicolumn{2}{p{4.5cm}|}{Pixels in the overlap belong to Animals; the rest of the large region belongs to Nature.} \\ \hline
-\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Repeat step 1 with the score rule.} & \multicolumn{2}{p{4.5cm}|}{The large, higher-scoring region owns the overlap.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_smaller\_region\_wins\_overlap\_by\_default and test\_score\_rule\_lets\_higher\_score\_win in \texttt{test\_routing.py}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Expert Routing}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Section 5.3.2, Handling Overlapping Regions}} \\*\hline
+\textbf{Test Case ID:} & TC-A-01 & \textbf{QA Test Engineer:} & Mohammad Ibraheem \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & Colorize a photograph \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Check that a contested pixel is given to the smallest region by default, and to the higher-scoring region when the score rule is selected.} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Routing module of the \texttt{colorize} package.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $20\times30$ images with rectangular masks.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Default prompt set and overlap rule.} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Route a large ``tree'' region (score 0.9) and a small ``animal'' region (score 0.4) lying inside it.} & Pixels in the overlap belong to Animals; the rest of the large region belongs to Nature. \\ \hline
+2 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Repeat step 1 with the score rule.} & The large, higher-scoring region owns the overlap. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that overlapping regions are resolved by the smallest-area rule by default, and by higher score when the score rule is selected.} \\*\hline
 \multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
+\end{longtable}
+}
 
-\begin{table}[H]
-\caption{Test case TC-A-02: unroutable labels and the fallback.}
-\label{tab:tc-a-02}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
+\Needspace{28\baselineskip}
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-A-02: unroutable labels and the fallback.}\label{tab:tc-a-02} \\*
 \hline
-\multicolumn{4}{|c|}{\textbf{Expert Routing}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Sections 5.3.1 and 5.3.3, Label Mapping and Uncovered Pixels}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-A-02} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Mohammad Ibraheem \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Check that labels outside the prompt set are discarded and their pixels become uncovered, and that every pixel always receives exactly one domain.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Routing module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $20\times30$ images; merged-label splitting is off.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{Default prompt set.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Route one region labelled ``spaceship''.} & \multicolumn{2}{p{4.5cm}|}{The region is discarded; coverage is 0; the fallback share is 1.} \\ \hline
-\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Route the label ``person face'' with word splitting off.} & \multicolumn{2}{p{4.5cm}|}{The label is not routed.} \\ \hline
-\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{Route one ``person'' region covering a part of the image.} & \multicolumn{2}{p{4.5cm}|}{Coverage equals the covered fraction; every other pixel is fallback; no pixel has an invalid domain.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_unknown\_label\_is\_discarded\_and\_routed\_to\_fallback, test\_merged\_label\_is\_not\_split\_by\_default, and test\_uncovered\_pixels\_go\_to\_fallback\_and\_coverage\_is\_correct in \texttt{test\_routing.py}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Expert Routing}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Sections 5.3.1 and 5.3.3, Label Mapping and Uncovered Pixels}} \\*\hline
+\textbf{Test Case ID:} & TC-A-02 & \textbf{QA Test Engineer:} & Mohammad Ibraheem \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & Colorize a photograph \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Check that labels outside the prompt set are discarded and their pixels become uncovered, and that every pixel always receives exactly one domain.} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Routing module of the \texttt{colorize} package.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $20\times30$ images; merged-label splitting is off.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Default prompt set.} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Route one region labelled ``spaceship''.} & The region is discarded; coverage is 0; the fallback share is 1. \\ \hline
+2 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Route the label ``person face'' with word splitting off.} & The label is not routed. \\ \hline
+3 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Route one ``person'' region covering a part of the image.} & Coverage equals the covered fraction; every other pixel is fallback; no pixel has an invalid domain. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that labels outside the prompt set are discarded, merged labels are not routed by default, and uncovered pixels are assigned to the fallback domain.} \\*\hline
 \multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
+\end{longtable}
+}
 
-\begin{table}[H]
-\caption{Test case TC-A-03: equal-area overlap tie goes to higher score.}
-\label{tab:tc-a-03}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
+\Needspace{28\baselineskip}
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-A-03: equal-area overlap tie goes to the higher score.}\label{tab:tc-a-03} \\*
 \hline
-\multicolumn{4}{|c|}{\textbf{Expert Routing}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Section 5.3.2, Handling Overlapping Regions}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-A-03} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Mohammad Ibraheem \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify that when two regions have equal area and overlap, the higher-scoring region wins the contested pixels.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Routing module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $20\times30$ images; two equal-area regions (64 pixels each) with different labels and scores.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{Default prompt set and overlap rule (area-based).} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Route a ``person'' region (score 0.4) and a ``sky'' region (score 0.9) of equal area (64 px) overlapping at one pixel.} & \multicolumn{2}{p{4.5cm}|}{The overlap pixel is assigned to sky (higher score); person owns the rest of its region.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_equal\_area\_tie\_goes\_to\_higher\_score in \texttt{test\_routing.py:156-167}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Expert Routing}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Section 5.3.2, Handling Overlapping Regions}} \\*\hline
+\textbf{Test Case ID:} & TC-A-03 & \textbf{QA Test Engineer:} & Mohammad Ibraheem \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & Colorize a photograph \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify that when two regions have equal area and overlap, the higher-scoring region wins the contested pixels.} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Routing module of the \texttt{colorize} package.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $20\times30$ images; two equal-area regions (64 pixels each) with different labels and scores.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Default prompt set and overlap rule (area-based).} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Route a ``person'' region (score 0.4) and a ``sky'' region (score 0.9) of equal area (64 px) overlapping at one pixel.} & The overlap pixel is assigned to sky (higher score); person owns the rest of its region. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that when two regions of equal area overlap, the higher-scoring region wins the contested pixels.} \\*\hline
 \multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
+\end{longtable}
+}
 
-\FloatBarrier
+\clearpage
 \subsubsection{Extraction, Colorization Wrapper, and Blending}
 
-\begin{table}[H]
-\caption{Test case TC-B-01: context-margin cropping and clipping.}
-\label{tab:tc-b-01}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
-\hline
-\multicolumn{4}{|c|}{\textbf{Region Extraction}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Section 7.5, Cropping with Context}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-B-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Muhammad Zaeem \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify that RegionExtractor expands the bounding box by the configured margin $\rho$, clips to image boundaries, and preserves aspect ratio during resize to expert input size.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Extraction module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $100\times150$ working image; region box at various positions.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{ColorizationConfig with margin=0.2, input\_size=64.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Region at (30,20)-(70,60), w=40, h=40, $\rho=0.2$.} & \multicolumn{2}{p{4.5cm}|}{Crop box: (22,12)-(78,68). Expansion of 8px each side.} \\ \hline
-\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Region at (0,0)-(20,20), $\rho=0.5$.} & \multicolumn{2}{p{4.5cm}|}{Crop box clipped: (0,0)-(45,45). No negative coords.} \\ \hline
-\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{Region at (120,70)-(150,100), $\rho=0.5$.} & \multicolumn{2}{p{4.5cm}|}{Crop box clipped at right/bottom: (105,55)-(150,100).} \\ \hline
-\multicolumn{1}{|l|}{4} & \multicolumn{1}{p{5cm}|}{Extract input and map output round-trip.} & \multicolumn{2}{p{4.5cm}|}{Resized crop is $64\times64$; mapped canvas is $100\times150\times2$; zeros outside crop.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to 7 automated tests in \texttt{TestRegionExtractorCropBox} and \texttt{TestRegionExtractorInputOutput}.} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
 
-\begin{table}[H]
-\caption{Test case TC-B-02: soft-mask blending and division-by-zero safety.}
-\label{tab:tc-b-02}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-B-01: context-margin cropping and clipping.}\label{tab:tc-b-01} \\*
 \hline
-\multicolumn{4}{|c|}{\textbf{Blending and Reconstruction}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Section 7.7, Soft Masks and Combining Chrominance}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-B-02} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Muhammad Zaeem \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify Blender produces soft masks in $[0,1]$, restricts them to crop, computes weighted-average chrominance at overlaps, and returns 0.0 (not NaN) for uncovered pixels.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Blending module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $100\times150$ working image; two overlapping regions.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{ColorizationConfig with blending\_on=True, smoothing\_width=5.0.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Two regions with disjoint masks, values 10 and 20.} & \multicolumn{2}{p{4.5cm}|}{Output equals 10 in first region, 20 in second.} \\ \hline
-\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Two regions with identical full-image masks, values 10 and 30.} & \multicolumn{2}{p{4.5cm}|}{Overlap pixels equal 20 (weighted average).} \\ \hline
-\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{Single region covering top-left quadrant only.} & \multicolumn{2}{p{4.5cm}|}{Bottom-right quadrant is 0.0 (no NaN/Inf).} \\ \hline
-\multicolumn{1}{|l|}{4} & \multicolumn{1}{p{5cm}|}{blending\_off=True with overlapping masks.} & \multicolumn{2}{p{4.5cm}|}{Binary masks used; overlap pixels averaged.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to 9 automated tests in \texttt{TestBlenderSoftMask}, \texttt{TestBlenderCombination}, \texttt{TestBlenderSigma}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Region Extraction}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Section 7.1.4, Cropping with Context}} \\*\hline
+\textbf{Test Case ID:} & TC-B-01 & \textbf{QA Test Engineer:} & Muhammad Zaeem \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & Colorize a photograph \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify that \texttt{RegionExtractor} expands the bounding box by the configured margin $\rho$, clips to image boundaries, and resizes the crop to the expert input size.} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Extraction module of the \texttt{colorize} package.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $100\times150$ working image; region box at various positions.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{\texttt{ColorizationConfig} with margin=0.2, \texttt{input\_\allowbreak size}=64.} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Region at (30,20)-(70,60), w=40, h=40, $\rho=0.2$.} & Crop box: (22,12)-(78,68). Expansion of 8 px on each side. \\ \hline
+2 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Region at (0,0)-(20,20), $\rho=0.5$.} & Crop box clipped: (0,0)-(45,45). No negative coordinates. \\ \hline
+3 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Region at (120,70)-(150,100), $\rho=0.5$.} & Crop box clipped at right/bottom: (105,55)-(150,100). \\ \hline
+4 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Extract input and map output round-trip.} & Resized crop is $64\times64$; mapped canvas is $100\times150\times2$; zeros outside the crop. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that context-margin expansion clips at image boundaries and that the extract-map round-trip preserves the canvas shape with zeros outside the crop.} \\*\hline
 \multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
+\end{longtable}
+}
 
-\FloatBarrier
+\Needspace{28\baselineskip}
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-B-02: soft-mask blending and division-by-zero safety.}\label{tab:tc-b-02} \\*
+\hline
+\multicolumn{4}{|c|}{\textbf{Blending and Reconstruction}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Section 7.1.6, Soft Masks and Combining Chrominance}} \\*\hline
+\textbf{Test Case ID:} & TC-B-02 & \textbf{QA Test Engineer:} & Muhammad Zaeem \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & Colorize a photograph \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify that \texttt{Blender} produces soft masks in $[0,1]$, restricts them to the crop, computes the weighted-average chrominance at overlaps, and returns 0.0 (not NaN) for uncovered pixels.} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Blending module of the \texttt{colorize} package.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $100\times150$ working image; two overlapping regions.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{\texttt{ColorizationConfig} with \texttt{blending\_\allowbreak on}=True, \texttt{smoothing\_\allowbreak width}=5.0.} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Two regions with disjoint masks, values 10 and 20.} & Output equals 10 in the first region and 20 in the second. \\ \hline
+2 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Two regions with identical full-image masks, values 10 and 30.} & Overlap pixels equal 20 (weighted average). \\ \hline
+3 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Single region covering the top-left quadrant only.} & Bottom-right quadrant is 0.0 (no NaN/Inf). \\ \hline
+4 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\texttt{blending\_\allowbreak off}=True with overlapping masks.} & Binary masks used; overlap pixels averaged. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that soft masks stay in [0,1], are restricted to the crop, weighted-average blending works at overlaps, and uncovered pixels yield 0.0 (not NaN).} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{longtable}
+}
+
+\clearpage
 \subsubsection{Image Quality Metrics}
 
-\begin{table}[H]
-\caption{Test case TC-C-01: PSNR infinity for identical images.}
-\label{tab:tc-c-01}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
-\hline
-\multicolumn{4}{|c|}{\textbf{Image Quality Metrics}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Section 7.13, PSNR}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-C-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Sheikh Muhammad Fareed \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & E3, E4 evaluation \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify compute\_psnr returns positive infinity when comparing an image with itself (MSE = 0).} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Metrics module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $64\times64\times3$ uint8 RGB image, constant value 128.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{compute\_perceptual=False to isolate PSNR.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Call evaluate\_colorization\_metrics(img, img).} & \multicolumn{2}{p{4.5cm}|}{PSNR = inf; SSIM $\approx$ 1.0; Lab $\Delta E \approx$ 0.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_evaluate\_colorization\_metrics\_identical\_images in \texttt{test\_e4.py}.} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
 
-\begin{table}[H]
-\caption{Test case TC-C-02: Lab $\Delta E_{00}$ symmetry.}
-\label{tab:tc-c-02}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-C-01: PSNR infinity for identical images.}\label{tab:tc-c-01} \\*
 \hline
-\multicolumn{4}{|c|}{\textbf{Image Quality Metrics}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Section 7.13, Lab $\Delta E_{00}$}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-C-02} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Sheikh Muhammad Fareed \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & E3, E4 evaluation \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify compute\_lab\_delta\_e is symmetric: distance(A,B) = distance(B,A) for different images.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Metrics module of the \texttt{colorize} package.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $64\times64\times3$ images: gt=zeros, pred=constant 50.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{compute\_perceptual=False.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Evaluate metrics(gt, pred) and metrics(pred, gt).} & \multicolumn{2}{p{4.5cm}|}{Both Lab $\Delta E$ values equal within numerical precision.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_evaluate\_colorization\_metrics\_different\_images in \texttt{test\_e4.py}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{Image Quality Metrics}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Section 7.1.12, PSNR}} \\*\hline
+\textbf{Test Case ID:} & TC-C-01 & \textbf{QA Test Engineer:} & Sheikh Muhammad Fareed \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & E3, E4 evaluation \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify that \texttt{compute\_\allowbreak psnr} returns positive infinity when comparing an image with itself (MSE = 0).} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Metrics module of the \texttt{colorize} package.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $64\times64\times3$ uint8 RGB image, constant value 128.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{\texttt{compute\_\allowbreak perceptual}=False to isolate PSNR.} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Call \texttt{evaluate\_\allowbreak colorization\_\allowbreak metrics(img, img)}.} & PSNR = inf; SSIM $\approx$ 1.0; Lab $\Delta E \approx$ 0. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that PSNR returns positive infinity for identical images (MSE = 0) and finite positive values for different images.} \\*\hline
 \multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
+\end{longtable}
+}
 
-\FloatBarrier
+\Needspace{28\baselineskip}
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-C-02: Lab $\Delta E_{00}$ symmetry.}\label{tab:tc-c-02} \\*
+\hline
+\multicolumn{4}{|c|}{\textbf{Image Quality Metrics}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Section 7.1.12, Lab $\Delta E_{00}$}} \\*\hline
+\textbf{Test Case ID:} & TC-C-02 & \textbf{QA Test Engineer:} & Sheikh Muhammad Fareed \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & E3, E4 evaluation \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify that \texttt{compute\_\allowbreak lab\_\allowbreak delta\_\allowbreak e} is symmetric: distance(A,B) = distance(B,A) for different images.} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Metrics module of the \texttt{colorize} package.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $64\times64\times3$ images: gt=zeros, pred=constant 50.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{\texttt{compute\_\allowbreak perceptual}=False.} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Evaluate \texttt{metrics(gt, pred)} and \texttt{metrics(pred, gt)}.} & Both Lab $\Delta E$ values are equal within numerical precision. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that Lab $\Delta E$ is symmetric: distance(A,B) equals distance(B,A) for different images.} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{longtable}
+}
+
+\clearpage
 \subsubsection{End-to-End Integration}
 
-\begin{table}[H]
-\caption{Test case TC-INT-01: Person A + Person B integration on synthetic image.}
-\label{tab:tc-int-01}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
-\hline
-\multicolumn{4}{|c|}{\textbf{Integration}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Section 7.11, E4 Pipeline Runner}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-INT-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Mohammad Ibraheem, Muhammad Zaeem \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & Colorize a photograph \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify full pipeline handover: synthetic luminance image routed by Person A (decomposition/routing), then colorized by Person B (extraction, mock experts, blending, reconstruction) producing valid 8-bit RGB.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{Full \texttt{colorize} pipeline (decomposition, routing, extraction, experts, blending, reconstruction).} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $120\times160$ luminance image; two hand-made regions (sky/nature at top, person/people in middle); fallback region for uncovered pixels.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{ColorizationConfig(margin=0.2, smoothing\_width=8.0, blending\_on=True); MockExpertColorizer with domain-specific constant chrominance.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Route two regions (sky$\to$nature, person$\to$people) via \texttt{route()}.} & \multicolumn{2}{p{4.5cm}|}{Two regions with correct domains; fallback domain present; owner map valid.} \\ \hline
-\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Create fallback region from uncovered pixels (owner < 0).} & \multicolumn{2}{p{4.5cm}|}{Fallback region with domain=fallback, mask covering uncovered pixels.} \\ \hline
-\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{For each region: extract L crop, predict ab with mock expert, map to canvas, get binary mask.} & \multicolumn{2}{p{4.5cm}|}{Each crop resized to input\_size$\times$input\_size; canvas $H\times W\times2$; binary mask matches region shape.} \\ \hline
-\multicolumn{1}{|l|}{4} & \multicolumn{1}{p{5cm}|}{Blend chrominance canvases with soft masks.} & \multicolumn{2}{p{4.5cm}|}{Blended ab shape $H\times W\times2$; finite values; nature region center matches mock nature color.} \\ \hline
-\multicolumn{1}{|l|}{5} & \multicolumn{1}{p{5cm}|}{Reconstruct full RGB from L and blended ab.} & \multicolumn{2}{p{4.5cm}|}{RGB shape $H\times W\times3$, dtype uint8, all values in $[0,255]$.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_person\_a\_and\_b\_integration in \texttt{test\_integration.py}.} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
 
-\FloatBarrier
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.0}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-INT-01: handover from routing to colorization on a synthetic image.}\label{tab:tc-int-01} \\*
+\hline
+\multicolumn{4}{|c|}{\textbf{Integration}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Sections 7.1.3 to 7.1.6, from Routing to Reconstruction}} \\*\hline
+\textbf{Test Case ID:} & TC-INT-01 & \textbf{QA Test Engineer:} & Mohammad Ibraheem, Muhammad Zaeem \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & Colorize a photograph \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify the routing-to-colorization handover: hand-made regions on a synthetic image are routed, then colorized with context crops, stand-in experts, blending and reconstruction, giving a valid 8-bit RGB image.} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Full \texttt{colorize} pipeline.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $120\times160$ luminance image; two hand-made regions (sky/nature, person/people); fallback for uncovered pixels.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{\texttt{ColorizationConfig}(margin=0.2, \texttt{smoothing\_\allowbreak width}=8.0, \texttt{blending\_\allowbreak on}=True); \texttt{MockExpertColorizer} with domain-specific constant chrominance.} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Route two regions (sky$\to$nature, person$\to$people) with \texttt{route()}.} & Two regions with the correct domains; fallback domain present; owner map valid. \\ \hline
+2 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Create the fallback region from uncovered pixels (owner $<0$).} & Fallback region with domain fallback and a mask covering the uncovered pixels. \\ \hline
+3 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{For each region: extract the L crop, predict ab with the stand-in expert, map it to the canvas, get the binary mask.} & Each crop is resized to \texttt{input\_\allowbreak size}$\times$\texttt{input\_\allowbreak size}; canvas $H\times W\times2$; binary mask matches the region shape. \\ \hline
+4 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Blend the chrominance canvases with soft masks.} & Blended ab has shape $H\times W\times2$ with finite values; the center of the nature region matches the stand-in nature color. \\ \hline
+5 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Reconstruct the full RGB image from L and the blended ab.} & RGB shape $H\times W\times3$, dtype uint8, all values in $[0,255]$. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies the handover from routing to colorization: two routed regions, crop extraction, stand-in experts, blending, and reconstruction of a valid 8-bit RGB image.} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
+\end{longtable}
+}
+
+\clearpage
 \subsubsection{Pipeline Ablations (E4)}
 
-\begin{table}[H]
-\caption{Test case TC-E4-01: E4 pipeline ablation conditions and prediction sharing.}
-\label{tab:tc-e4-01}
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|llll|}
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.0}
+\setlength{\LTleft}{0pt}\setlength{\LTright}{0pt}\setlength{\LTcapwidth}{\textwidth}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\tcA}|>{\raggedright\arraybackslash}p{\tcB}|>{\raggedright\arraybackslash}p{\tcC}|>{\raggedright\arraybackslash}p{\tcD}|}
+\caption{Test case TC-E4-01: E4 pipeline ablation conditions and prediction sharing.}\label{tab:tc-e4-01} \\*
 \hline
-\multicolumn{4}{|c|}{\textbf{E4 Pipeline Ablations}} \\ \hline
-\multicolumn{4}{|c|}{\textbf{Section 7.12, E4 Ablation Runner}} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Case ID:}} & \multicolumn{1}{l|}{TC-E4-01} & \multicolumn{1}{l|}{\textbf{QA Test Engineer:}} & Muhammad Zaeem \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test case Version:}} & \multicolumn{1}{l|}{1.0} & \multicolumn{1}{l|}{\textbf{Reviewed By:}} & Project team \\ \hline
-\multicolumn{1}{|l|}{\textbf{Test Date:}} & \multicolumn{1}{l|}{10th November 2026} & \multicolumn{1}{l|}{\textbf{Use Case Reference(s):}} & E4 ablation study \\ \hline
-\multicolumn{1}{|l|}{\textbf{Revision History:}} & \multicolumn{3}{l|}{None} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Objective:}} & \multicolumn{3}{p{9cm}|}{Verify that the E4 pipeline runner generates all 13 ablation conditions, shares expert predictions across conditions with the same margin, and produces valid RGB output for each condition.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Product/Ver/Module:}} & \multicolumn{3}{p{9cm}|}{E4 pipeline runner (\texttt{experiments.e4}), mock expert manager.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Environment:}} & \multicolumn{3}{p{9cm}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Assumptions:}} & \multicolumn{3}{p{9cm}|}{Synthetic $80\times80$ luminance image; one person region + fallback; 7 test conditions.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Pre-Requisite:}} & \multicolumn{3}{p{9cm}|}{MockExpertManager returning constant chrominance; conditions: default, 3 margins, blending\_off, smooth\_5.0, shape\_box.} \\ \hline
-\multicolumn{1}{|l|}{\textbf{Step No.}} & \multicolumn{1}{l|}{\textbf{Execution description}} & \multicolumn{2}{l|}{\textbf{Procedure result}} \\ \hline
-\multicolumn{1}{|l|}{1} & \multicolumn{1}{p{5cm}|}{Run pipeline for 7 ablation conditions with mock expert manager.} & \multicolumn{2}{p{4.5cm}|}{Each condition returns $80\times80\times3$ uint8 RGB image.} \\ \hline
-\multicolumn{1}{|l|}{2} & \multicolumn{1}{p{5cm}|}{Verify expert call count.} & \multicolumn{2}{p{4.5cm}|}{6 calls (2 regions $\times$ 3 unique margins); predictions shared for same margin across blending/smoothing/shape.} \\ \hline
-\multicolumn{1}{|l|}{3} & \multicolumn{1}{p{5cm}|}{Verify fallback region receives prediction in all conditions.} & \multicolumn{2}{p{4.5cm}|}{Uncovered pixels colorized by fallback expert in every condition.} \\ \hline
-\multicolumn{1}{|l|}{4} & \multicolumn{1}{p{5cm}|}{Verify output pixel values in valid range for all conditions.} & \multicolumn{2}{p{4.5cm}|}{All RGB values in $[0,255]$; no NaN/Inf in any condition.} \\ \hline
-\multicolumn{4}{|l|}{\textbf{Comments:} Corresponds to test\_run\_pipeline\_for\_image\_ablations in \texttt{test\_e4.py:146-207}.} \\ \hline
+\multicolumn{4}{|c|}{\textbf{E4 Pipeline Ablations}} \\*\hline
+\multicolumn{4}{|c|}{\textbf{Section 7.1.10, E4 Pipeline Runner Implementation}} \\*\hline
+\textbf{Test Case ID:} & TC-E4-01 & \textbf{QA Test Engineer:} & Muhammad Zaeem \\*\hline
+\textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
+\textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & E4 ablation study \\*\hline
+\textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify that the E4 pipeline runner generates all 13 ablation conditions, shares expert predictions across conditions with the same margin, and produces valid RGB output for each condition.} \\ \hline
+\textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{E4 pipeline runner (\texttt{experiments.e4}), stand-in expert manager.} \\ \hline
+\textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
+\textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $80\times80$ luminance image; one person region plus fallback; 7 test conditions.} \\ \hline
+\textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{\texttt{MockExpertManager} returning constant chrominance; conditions: default, 3 margins, \texttt{blending\_\allowbreak off}, \texttt{smooth\_\allowbreak 5.0}, \texttt{shape\_\allowbreak box}.} \\ \hline
+\textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
+1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Run the pipeline for 7 ablation conditions with the stand-in expert manager.} & Each condition returns an $80\times80\times3$ uint8 RGB image. \\ \hline
+2 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Verify the expert call count.} & 6 calls (2 regions $\times$ 3 unique margins); predictions shared for the same margin across blending, smoothing and shape conditions. \\ \hline
+3 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Verify that the fallback region receives a prediction in all conditions.} & Uncovered pixels are colorized by the fallback expert in every condition. \\ \hline
+4 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Verify that output pixel values are in the valid range for all conditions.} & All RGB values in $[0,255]$; no NaN/Inf in any condition. \\*\hline
+\multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that the E4 runner generates the ablation conditions, shares expert predictions across same-margin conditions, and produces valid RGB for each.} \\*\hline
 \multicolumn{4}{|c|}{\textbf{Result: Passed}} \\ \hline
-\end{tabular}}
-\end{table}
+\end{longtable}
+}
+
 
 \FloatBarrier
 \subsection{Conclusion}
