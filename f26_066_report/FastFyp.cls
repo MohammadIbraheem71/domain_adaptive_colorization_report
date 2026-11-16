@@ -80,6 +80,17 @@
   {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
 \titlespacing*{\subsubsection}{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
 
+% Let body chapters follow the preceding text instead of forcing a new page.
+% Activate after \mainmatter so the front matter retains its own page layout.
+\newcommand{\continuouschapters}{%
+  \titleclass{\chapter}{straight}%
+  \titleformat{\chapter}[block]
+    {\normalfont\Large\bfseries}{Chapter \thechapter}{10pt}{}%
+  \titlespacing*{\chapter}{0pt}{3.5ex plus 1ex minus .2ex}{10pt}%
+  \AddToHook{cmd/chapter/before}{\FloatBarrier\Needspace{6\baselineskip}}%
+  \raggedbottom
+}
+
 \hypersetup{colorlinks, linkcolor=black, citecolor=blue, urlcolor=blue}
 
 \usepackage{setspace}

@@ -119,6 +119,7 @@ The project relates to SDG 11, Target 11.4, the protection of cultural heritage,
 \addcontentsline{toc}{chapter}{List of Tables}
 
 \mainmatter
+\continuouschapters
 
 
 \chapter{Introduction}
@@ -2168,7 +2169,7 @@ This chapter presented the design of the colorization system. The system is a pi
 
 
 \chapter{Implementation and Test Cases}
-This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline, the evaluation tooling, and the test cases. It covers the five pipeline stages (decomposition, routing, extraction, colorization, blending), the configuration system, the web interface prototype, the E4 ablation runner, the extensibility mechanism, and the evaluation metrics with fixed test sets. The implementation follows the design of Chapter~\ref{ch:design} and produces the experimental results reported in Chapters~8 and~9.
+This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline, the evaluation tooling, and the test cases. It covers the five pipeline stages (decomposition, routing, extraction, colorization, blending), the configuration system, the web interface prototype, the E4 ablation runner, the extensibility mechanism, and the evaluation metrics with fixed test sets. The implementation follows the design of Chapter~\ref{ch:design} and produces the experimental results reported in Chapter~\ref{ch:results}.
 
 \section{Implementation}
 This section describes the implementation of the region-based Mixture-of-Experts colorization pipeline. The five stages are decomposition, routing, extraction, colorization, and blending, built as pure NumPy/PyTorch modules. Decomposition and routing logic uses only NumPy and is fully CPU-testable; model weights load lazily. A configuration system centralizes hyperparameters. A CLI and HTML prototype provide the web interface; full Next.js/FastAPI integration is deferred to FYP-2. The E4 ablation runner implements margin-based prediction sharing and CSV-based resumability. Extensibility is achieved through data-driven configuration, so adding a domain requires only data changes.
@@ -2226,7 +2227,7 @@ with $M_g$ the mask of the current group and $M_c$ the candidate mask. The merge
  
 If no detection survives steps 3 and 4, the stage returns an empty list. The routing stage then assigns every pixel to the fallback, as described in Section~\ref{sec:a_routing}.
  
-\paragraph{Parameters.} The stage has six parameters, listed in Table~\ref{tab:a_params}. The default values come from the earlier prototype notebook. Five of them were then selected on a tuning split of COCO-Stuff (Section~9.2); the maximum image side was kept at 1024 because it is a memory limit and not a quality setting.
+\paragraph{Parameters.} The stage has six parameters, listed in Table~\ref{tab:a_params}. The default values come from the earlier prototype notebook. Five of them were then selected on a tuning split of COCO-Stuff (Section~\ref{subsec:e1-parameter-tuning}); the maximum image side was kept at 1024 because it is a memory limit and not a quality setting.
 
 \begin{table}[!ht]
 \centering
@@ -2421,7 +2422,7 @@ to integers and restricts the rectangle to the crop. This uses the stored box
 before margin expansion and applies to the fallback as well. The variant keeps
 soft blending and reuses the predictions computed for the same crop margin.
 If the fallback mask is empty, its whole-image box can still give it a
-contribution in this variant. Section~9.5 reports the comparison with the
+contribution in this variant. Section~\ref{sec:e4-ablation} reports the comparison with the
 reference configuration.
 
 \subsection{Configuration and Shared Data Structures}
@@ -2472,7 +2473,7 @@ runner can load a saved decomposition or run decomposition on the image.
 \subsection{Web Interface Implementation}
 \label{subsec:web-interface}
 
-The design (Section~\ref{sec:sysoverview}) specifies a Next.js frontend with a FastAPI backend. In FYP-1, a minimal prototype was built as a concept demonstration but was not connected to the Python pipeline. Both are documented here for completeness and deferred to FYP-2 per the project scope (Section~10.4).
+The design (Section~\ref{sec:sysoverview}) specifies a Next.js frontend with a FastAPI backend. In FYP-1, a minimal prototype was built as a concept demonstration but was not connected to the Python pipeline. Both are documented here for completeness and deferred to FYP-2 per the project scope (Section~\ref{sec:omitted-work}).
 
 \subsubsection{CLI Entry Point (\texttt{main.py})}
 A command-line interface in \texttt{main.py} provides an end-to-end runner for the pipeline. It accepts an input image, a checkpoint (either a single shared checkpoint for all domains or a directory with per-domain checkpoints), and colorization parameters (margin, smoothing width, blending toggle, region shape, input size). The CLI builds the expert registry, runs decomposition with Grounded-SAM, executes the colorization pipeline, and saves the output RGB image. Optional flags enable saving intermediate stages (decomposition masks, routed regions, expert outputs, blended result) and a domain overlay visualization. The CLI uses the \texttt{colorize} package directly and does not require a web server.
@@ -2485,7 +2486,7 @@ The full Next.js + FastAPI integration is deferred to FYP-2.
 \subsection{Training Pipeline}
 \label{subsec:training-pipeline}
 
-Fine-tuning the four domain experts (people, nature, urban, animals) from the pretrained DDColor-T checkpoint is deferred to FYP-2 (Section~10.4). No training script was implemented in FYP-1. The \texttt{experiments/} directory contains evaluation runners only:
+Fine-tuning the four domain experts (people, nature, urban, animals) from the pretrained DDColor-T checkpoint is deferred to FYP-2 (Section~\ref{sec:omitted-work}). No training script was implemented in FYP-1. The \texttt{experiments/} directory contains evaluation runners only:
 \begin{itemize}
     \item \texttt{e1\_e2.py}: Decomposition and routing evaluation (E1, E2)
     \item \texttt{e3.py}: Whole-image baseline evaluation (E3)
@@ -2715,7 +2716,6 @@ Integration & Person A + Person B handover: synthetic luminance $\to$ routing $\
 The following test cases are presented in the full QA template format as representative examples of the 176-test suite.
 
 \FloatBarrier
-\clearpage
 \subsubsection{Expert Routing}
 % ---- Layout helpers for the test case tables (define once) ----
 \providecommand{\tcW}{\dimexpr\textwidth-8\tabcolsep-5\arrayrulewidth\relax}
@@ -2755,7 +2755,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\Needspace{28\baselineskip}
 {\small
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
@@ -2783,7 +2782,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\Needspace{28\baselineskip}
 {\small
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
@@ -2809,7 +2807,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\clearpage
 \subsubsection{Extraction, Colorization Wrapper, and Blending}
 
 
@@ -2841,7 +2838,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\Needspace{28\baselineskip}
 {\small
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
@@ -2870,7 +2866,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\clearpage
 \subsubsection{Image Quality Metrics}
 
 
@@ -2899,7 +2894,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\Needspace{28\baselineskip}
 {\small
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.15}
@@ -2925,7 +2919,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\clearpage
 \subsubsection{End-to-End Integration}
 
 
@@ -2958,7 +2951,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\clearpage
 \subsubsection{Pipeline Ablations (E4)}
 
 
@@ -2994,13 +2986,20 @@ The following test cases are presented in the full QA template format as represe
 \FloatBarrier
 \subsection{Conclusion}
 This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline and its evaluation tooling. The five pipeline stages (decomposition, routing, extraction, colorization, and blending) are implemented as pure NumPy/PyTorch modules. The web interface provides a CLI and HTML prototype; full Next.js/FastAPI integration is deferred to FYP-2. The E4 ablation runner implements margin-based prediction sharing, CSV-based resumability, and a four-command CLI. Extensibility is achieved through data-driven configuration, so adding a domain requires only data changes. The evaluation tooling provides 10 metrics, fixed COCO test sets with annotation validation, CSV result handling, and plotting. The 176-test suite covers all pipeline components using synthetic data and model stand-ins.
-% chapter 9 here
+\chapter{User Manual}
+\label{ch:user-manual}
+\textcolor{red}{This chapter will be added in FYP-II.} Design a complete user manual of your application and add that in this chapter.
+\textcolor{red}{NOTE: This Chapter is optional for Research projects but compulsory for Development projects.}
+
 \chapter{Experimental Results and Discussion}
+\label{ch:results}
 This chapter presents the experimental evaluation of the colorization
 pipeline. It reports decomposition and routing performance, compares the
 whole-image colorization baselines, and discusses how errors in early stages
 can affect the final output. Conclusions are limited to the datasets,
 subsets, and model conditions evaluated in this work.
+
+\section{E1: Region Decomposition}
 
 \subsection{Purpose and Setup}
 The first experiment checks how well the decomposition stage finds the regions that the rest of the pipeline depends on. Every later stage works on these regions: a person that is missed here cannot be sent to the people expert, and a region with the wrong extent cannot be corrected later.
@@ -3018,6 +3017,7 @@ The first experiment checks how well the decomposition stage finds the regions t
 Pixels left uncovered count as missed pixels ($FN$) of their true group and as false positives of no group. The mean intersection over union (mIoU) is the mean of the five group values. The domain values are obtained by merging the groups of a domain, which only affects the nature domain (sky and vegetation). The coverage is the fraction of pixels that are owned by some region. All images were processed at the working resolution of the decomposition stage, and the ground-truth maps were resized to it with nearest-neighbour interpolation. No image in either fixed list was downscaled. The resizing step caps the longer side at 1024 pixels, but the longest side among the 500 test images is 640 pixels (median 640, minimum 305), and among the 200 tuning images it is also 640 pixels (median 640, minimum 336). All 700 images were therefore decomposed at their original resolution, and the resizing step had no effect on the results of E1 and E2. It remains in the pipeline as a safeguard for larger inputs, such as the photographs the system is intended to handle outside the benchmark.
  
 \subsection{Parameter Tuning}
+\label{subsec:e1-parameter-tuning}
 Five parameters were selected on the tuning set: the box threshold, the text threshold, the minimum score, the suppression threshold and the merge threshold. The search was a single pass over the parameters, one at a time. Each parameter was varied over a small grid while the others stayed at their current best value, and the value with the highest mIoU was kept (ties were broken by the higher coverage). Table~\ref{tab:a_sweep} shows all results of this sweep.
  
 \begin{table}[!ht]
@@ -3114,14 +3114,14 @@ Figures~\ref{fig:a_e1_random} and~\ref{fig:a_e1_fail} show decompositions on six
  
 \begin{figure}[p]
 \centering
-\includegraphics[height=\textheight, width=\textwidth, keepaspectratio]{Figures/e1_examples_random.png}
+\includegraphics[height=0.86\textheight, width=\textwidth, keepaspectratio]{Figures/e1_examples_random.png}
 \caption{Decompositions of six randomly chosen test images: input, region overlay and ground-truth groups.}
 \label{fig:a_e1_random}
 \end{figure}
 
 \begin{figure}[p]
 \centering
-\includegraphics[height=\textheight, width=\textwidth, keepaspectratio]{Figures/e1_examples_failures.png}
+\includegraphics[height=0.86\textheight, width=\textwidth, keepaspectratio]{Figures/e1_examples_failures.png}
 \caption{Decompositions of the twelve test images with the lowest pixel accuracy.}
 \label{fig:a_e1_fail}
 \end{figure}
@@ -3185,7 +3185,7 @@ Urban & 162 & 108 & 0.667 \\ \hline
 \paragraph{Limits of the measurement.} Three points limit how far the result can be generalized. First, the accuracy measures the detector and the mapping together, so it cannot say which of the two is responsible for an error. Second, every region counts equally, whatever its size, so a small misrouted region and a large one weigh the same. Third, a region is judged by its dominant ground-truth class, so a region that mixes two classes is scored as if it were pure. The 47 discarded regions (1.7\% of all regions) show that unroutable labels are rare.
  
 \subsection{Summary of E1 and E2}
-Taken together, the two experiments show that the first two stages work well where they produce output and lose most of their quality through missing coverage. Routing is highly accurate for people and nature, and weaker for animals and urban scenes. The tuning of the minimum score gave the largest improvement, and its best value lay at the edge of the tested range, so wider tuning is a promising next step (Section~10.6).
+Taken together, the two experiments show that the first two stages work well where they produce output and lose most of their quality through missing coverage. Routing is highly accurate for people and nature, and weaker for animals and urban scenes. The tuning of the minimum score gave the largest improvement, and its best value lay at the edge of the tested range, so wider tuning is a promising next step (Section~\ref{sec:future-work}).
 
 
 \section{E3: Whole-Image Baselines}
@@ -3295,57 +3295,88 @@ slots loading the same pretrained DDColor-T checkpoint) against the whole-image
 E3 baseline, varying one pipeline component at a time. The experiment ran on
 100 COCO val2017 images (20 per domain plus 20 mixed scenes), producing 7,800
 metric records across 13 conditions and 6 metrics (PSNR, SSIM, Lab $\Delta
-E_{00}$, Boundary $\Delta E_{00}$, colorfulness, LPIPS). Table~\ref{tab:e4-summary}
-gives the mean $\pm$ standard deviation for each condition.
+E_{00}$, Boundary $\Delta E_{00}$, colorfulness, LPIPS).
+Tables~\ref{tab:e4-summary} and~\ref{tab:e4-perceptual-metrics} give the
+mean $\pm$ standard deviation for each condition, split by metric group.
 
-\begin{table}[htbp]
+\begin{table}[!htbp]
 \centering
-\caption{E4 ablation results on 100 COCO val2017 images (mean $\pm$ std).}
+\caption{E4 ablation results on 100 COCO val2017 images: PSNR, SSIM and Lab $\Delta E$ (mean $\pm$ std).}
 \label{tab:e4-summary}
 \small
-\begin{tabular}{lcccccc}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xccc}
 \hline
-Condition & PSNR $\uparrow$ & SSIM $\uparrow$ & Lab $\Delta E\downarrow$ & Bdy $\Delta E\downarrow$ & Colorfulness & LPIPS $\downarrow$ \\
+Condition & PSNR $\uparrow$ & SSIM $\uparrow$ & Lab $\Delta E\downarrow$ \\
 \hline
-default (margin 0.2, smooth 10, mask, blend) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
-margin\_0.0 & $22.78\pm3.06$ & $0.904\pm0.045$ & $10.24\pm3.23$ & $11.36\pm2.67$ & $32.2\pm14.2$ & $0.152\pm0.058$ \\
-margin\_0.1 & $22.80\pm3.07$ & $0.906\pm0.045$ & $10.21\pm3.26$ & $11.31\pm2.75$ & $32.0\pm14.3$ & $0.151\pm0.057$ \\
-margin\_0.2 (same as default) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
-margin\_0.3 & $22.77\pm3.01$ & $0.905\pm0.046$ & $10.26\pm3.23$ & $11.36\pm2.75$ & $32.3\pm14.2$ & $0.151\pm0.057$ \\
-blending\_off (binary paste) & $22.76\pm3.02$ & $0.904\pm0.046$ & $10.28\pm3.22$ & $11.42\pm2.74$ & $32.4\pm14.2$ & $0.152\pm0.057$ \\
-shape\_box (bounding boxes) & $22.91\pm3.04$ & $0.909\pm0.045$ & $10.12\pm3.21$ & $11.22\pm2.73$ & $31.8\pm14.4$ & $0.148\pm0.057$ \\
-smooth\_2.0 & $22.78\pm3.03$ & $0.904\pm0.046$ & $10.26\pm3.22$ & $11.38\pm2.74$ & $32.3\pm14.2$ & $0.152\pm0.057$ \\
-smooth\_5.0 & $22.80\pm3.03$ & $0.905\pm0.046$ & $10.24\pm3.22$ & $11.35\pm2.74$ & $32.2\pm14.2$ & $0.151\pm0.057$ \\
-smooth\_10.0 (same as default) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
-smooth\_15.0 & $22.84\pm3.04$ & $0.906\pm0.046$ & $10.21\pm3.22$ & $11.31\pm2.75$ & $32.0\pm14.3$ & $0.150\pm0.057$ \\
-smooth\_20.0 & $22.85\pm3.04$ & $0.906\pm0.046$ & $10.20\pm3.22$ & $11.30\pm2.75$ & $32.0\pm14.3$ & $0.150\pm0.057$ \\
-e3\_ddcolor\_t\_whole (E3 baseline) & $22.56\pm3.03$ & $0.911\pm0.043$ & $10.25\pm3.32$ & $11.43\pm2.73$ & $33.5\pm14.2$ & $0.150\pm0.055$ \\
+default (margin 0.2, smooth 10, mask, blend) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ \\
+margin\_0.0 & $22.78\pm3.06$ & $0.904\pm0.045$ & $10.24\pm3.23$ \\
+margin\_0.1 & $22.80\pm3.07$ & $0.906\pm0.045$ & $10.21\pm3.26$ \\
+margin\_0.2 (same as default) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ \\
+margin\_0.3 & $22.77\pm3.01$ & $0.905\pm0.046$ & $10.26\pm3.23$ \\
+blending\_off (binary paste) & $22.76\pm3.02$ & $0.904\pm0.046$ & $10.28\pm3.22$ \\
+shape\_box (bounding boxes) & $22.91\pm3.04$ & $0.909\pm0.045$ & $10.12\pm3.21$ \\
+smooth\_2.0 & $22.78\pm3.03$ & $0.904\pm0.046$ & $10.26\pm3.22$ \\
+smooth\_5.0 & $22.80\pm3.03$ & $0.905\pm0.046$ & $10.24\pm3.22$ \\
+smooth\_10.0 (same as default) & $22.83\pm3.04$ & $0.906\pm0.046$ & $10.22\pm3.22$ \\
+smooth\_15.0 & $22.84\pm3.04$ & $0.906\pm0.046$ & $10.21\pm3.22$ \\
+smooth\_20.0 & $22.85\pm3.04$ & $0.906\pm0.046$ & $10.20\pm3.22$ \\
+e3\_ddcolor\_t\_whole (E3 baseline) & $22.56\pm3.03$ & $0.911\pm0.043$ & $10.25\pm3.32$ \\
 \hline
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-\begin{figure}[p]
+\begin{table}[!htbp]
+\centering
+\caption{E4 ablation results on 100 COCO val2017 images: boundary $\Delta E$, colorfulness and LPIPS (mean $\pm$ std).}
+\label{tab:e4-perceptual-metrics}
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}Xccc}
+\hline
+Condition & Bdy $\Delta E\downarrow$ & Colorfulness & LPIPS $\downarrow$ \\
+\hline
+default (margin 0.2, smooth 10, mask, blend) & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
+margin\_0.0 & $11.36\pm2.67$ & $32.2\pm14.2$ & $0.152\pm0.058$ \\
+margin\_0.1 & $11.31\pm2.75$ & $32.0\pm14.3$ & $0.151\pm0.057$ \\
+margin\_0.2 (same as default) & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
+margin\_0.3 & $11.36\pm2.75$ & $32.3\pm14.2$ & $0.151\pm0.057$ \\
+blending\_off (binary paste) & $11.42\pm2.74$ & $32.4\pm14.2$ & $0.152\pm0.057$ \\
+shape\_box (bounding boxes) & $11.22\pm2.73$ & $31.8\pm14.4$ & $0.148\pm0.057$ \\
+smooth\_2.0 & $11.38\pm2.74$ & $32.3\pm14.2$ & $0.152\pm0.057$ \\
+smooth\_5.0 & $11.35\pm2.74$ & $32.2\pm14.2$ & $0.151\pm0.057$ \\
+smooth\_10.0 (same as default) & $11.32\pm2.75$ & $32.1\pm14.3$ & $0.151\pm0.057$ \\
+smooth\_15.0 & $11.31\pm2.75$ & $32.0\pm14.3$ & $0.150\pm0.057$ \\
+smooth\_20.0 & $11.30\pm2.75$ & $32.0\pm14.3$ & $0.150\pm0.057$ \\
+e3\_ddcolor\_t\_whole (E3 baseline) & $11.43\pm2.73$ & $33.5\pm14.2$ & $0.150\pm0.055$ \\
+\hline
+\end{tabularx}
+\end{table}
+
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{Figures/e4_ablation_margins.png}
     \caption{E4 margin ablation: PSNR (left) and Lab/Boundary $\Delta E$ (right) vs. context margin $\rho$.}
     \label{fig:e4-margins}
 \end{figure}
 
-\begin{figure}[p]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{Figures/e4_ablation_smoothing.png}
     \caption{E4 smoothing width ablation: Boundary $\Delta E$ (left axis) and PSNR (right axis) vs. $\sigma_0$.}
     \label{fig:e4-smoothing}
 \end{figure}
 
-\begin{figure}[p]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{Figures/e4_ablation_components.png}
     \caption{E4 component ablations: blending on/off, SAM masks vs. bounding boxes.}
     \label{fig:e4-components}
 \end{figure}
 
-\begin{figure}[p]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=0.9\textwidth]{Figures/e4_comparison_e3_e4.png}
     \caption{E3 whole-image DDColor-T vs. E4 full pipeline with identical experts.}
@@ -3411,8 +3442,8 @@ values are preliminary because each set has only 20 samples. Full evaluation
 of the pipeline's effect is now supported by the E4 results alongside E1
 and E2.
 
-%chapter number 10 here
-\chapter{Conclusions}
+\chapter{Conclusion and Future Work}
+\label{ch:conclusion}
 % ===== Chapter 10, Person A sections: 10.5 and 10.6 =====
 
 \section{Summary of Work Done}
@@ -3475,6 +3506,7 @@ propagate into the final reconstruction and increase reliance on fallback.
 
 
 \section{What Was Left Out and Why}
+\label{sec:omitted-work}
 Several parts of the original plan are not part of this deliverable. They are listed here with the reason for each.
 
 \paragraph{Fine-tuning the four domain experts.} The experts are the central idea of the framework, but training them requires many hours of GPU time on four datasets. The university-assigned GPU machine became available only shortly before the deadline, and the free Kaggle and Colab sessions are limited in length and quota, which is not enough to train four networks and still leave time for evaluation. In this deliverable, all four expert slots therefore use the same pretrained model. As a consequence, the results describe the pipeline (decomposition, routing, context margin and blending), and they say nothing yet about whether specialization helps.
@@ -3489,8 +3521,41 @@ Several parts of the original plan are not part of this deliverable. They are li
 
 \paragraph{E4 pipeline ablation evaluation.} \textit{Completed in this deliverable.} The full pipeline with identical experts was evaluated across 13 ablation conditions on 100 images, including margin, blending, smoothing width, region shape, and comparison with the E3 whole-image baseline.
 
-\section{Recommendations and Future Work}
-The results of E1 and E2 point to several concrete improvements of the first two stages.
+\section{Future Work}
+\label{sec:future-work}
+FYP-1 has completed the five-stage pipeline, evaluation tooling, automated
+tests, and E1--E4 experiments. The domain slots currently share a pretrained
+DDColor-T checkpoint, so the results do not yet establish the benefit of
+domain specialization. The FYP-2 plan builds on this implementation through
+the following remaining activities.
+
+\paragraph{Fine-tune the domain experts.} Prepare disjoint training,
+validation, and test splits for the people, nature, urban, and animal domains.
+Implement the training procedure, hyperparameter configuration, and checkpoint
+management, and fine-tune a separate DDColor-T model for each domain.
+
+\paragraph{Integrate and evaluate the trained experts.} Register the four
+trained checkpoints in the existing pipeline and evaluate their outputs on
+whole images, region crops, and mixed scenes. Compare the specialized
+pipeline with pretrained DDColor-T and DDColor-L, and with a DDColor-T
+baseline fine-tuned on pooled data from all four domains. Perform the deferred
+shuffled-routing ablation and repeat the blending comparisons with distinct
+experts, using the colorization and boundary metrics defined in the report.
+
+\paragraph{Demonstrate extensibility with a trained fifth expert.} Train
+and register the planned Vehicles expert and its prompts. Check that the
+existing expert checkpoints remain unchanged, evaluate the new domain, and
+compare existing-domain masks and colorization quality before and after
+the addition.
+
+\paragraph{Complete the web interface integration.} Connect the proposed
+Next.js frontend and FastAPI backend to the Python pipeline for image upload,
+inference, and result display. Test the integrated workflow with actual model
+outputs, since the current standalone HTML prototype only simulates
+colorization.
+
+The results of E1 and E2 also point to several concrete improvements of the
+first two stages, which will be investigated alongside the work above.
 
 \paragraph{Improve coverage.} Most of the decomposition errors are pixels that no region covers (84\% of all errors in E1), and vegetation and building are affected the most. The first step is a wider parameter search, since the minimum score and the text threshold were still improving at the edge of their grids and a joint search could find combinations that the one-at-a-time sweep cannot. Beyond that, the prompt set could be extended with additional words for vegetation and building-like surfaces, and each change should be tested with the same experiment, so that it is kept only if the mIoU rises.
 
@@ -3519,9 +3584,6 @@ trained experts and a broader, reproducible evaluation.
 
 \begin{comment}
 
-\chapter{User Manual}
-\textcolor{red}{This chapter will be added in FYP-II.} Design a complete user manual of your application and add that in this chapter.
-\textcolor{red}{NOTE: This Chapter is optional for Research projects but compulsory for Development projects.}\\
 \chapter{Experimental Results and Discussion}
 This chapter will be added in FYP-II. Give proper analysis and discussion of experimental results (in plain English text) along with tables of results.  For each chapter provide a paragraph of introduction and in the end a paragraph of conclusions.\\
 \textcolor{red}{NOTE: This Chapter is optional for Development projects but compulsory for Research projects.}
