@@ -3474,24 +3474,28 @@ Boundary $\Delta E$ (11.30); bounding boxes surprisingly outperform SAM masks
 on all metrics. These results use identical model weights; the benefit of
 independently fine-tuned experts is left for future work.
 
+\Needspace{10\baselineskip}
 \section{Scope and Objectives}
 \label{sec:objectives-status}
-\begin{table}[htbp]
-\centering
+\begin{longtable}{p{0.18\linewidth}p{0.18\linewidth}p{0.54\linewidth}}
 \caption{Status of the five project objectives.}
-\label{tab:objective-status}
-\begin{tabular}{p{0.18\linewidth}p{0.18\linewidth}p{0.54\linewidth}}
+\label{tab:objective-status}\\
 \hline
 Objective & Status & Evidence and scope\\
 \hline
-Segment/decompose & Partly met & Region decomposition is implemented and evaluated; coverage is 0.427 and group mIoU is 0.624.\\
+\endfirsthead
+\caption[]{Status of the five project objectives (continued).}\\
+\hline
+Objective & Status & Evidence and scope\\
+\hline
+\endhead
+Segment/\allowbreak decompose & Partly met & Region decomposition is implemented and evaluated; coverage is 0.427 and group mIoU is 0.624.\\
 Train domain experts & Deferred & The four expert slots use one pretrained DDColor-T checkpoint; separate training was not completed.\\
 Route regions & Partly met & Fixed routing is implemented; E2 accuracy was 0.922 overall and 0.817 macro-average across domains.\\
 Blend predictions & Met & Blending and reconstruction are implemented and evaluated in E4; soft blending reduces Boundary $\Delta E$ to 11.32 vs. 11.43 for binary paste, and the full pipeline matches whole-image DDColor-T on reference metrics.\\
 Extend with another expert & Deferred & A trained fifth expert and a corresponding extensibility evaluation are not included in the supplied results.\\
 \hline
-\end{tabular}
-\end{table}
+\end{longtable}
 
 \section{Challenges}
 \label{sec:challenges}

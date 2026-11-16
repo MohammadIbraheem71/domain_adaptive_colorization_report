@@ -95,6 +95,8 @@
 
 \usepackage{setspace}
 \setstretch{1.5}
+% Match the single line spacing that setspace already applies to table floats.
+\AddToHook{env/longtable/begin}{\setstretch{1}}
 
 \usepackage{mathptmx}
 \captionsetup{font={small}}
