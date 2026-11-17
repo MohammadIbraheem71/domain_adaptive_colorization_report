@@ -3771,7 +3771,7 @@ experts, because all slots shared one checkpoint. That question requires the
 FYP-2 training work.
 
 \clearpage
-\chapter{Conclusion and Future Work}
+\chapter{Future Work and Conclusion}
 \label{ch:conclusion}
 % ===== Chapter 10, Person A sections: 10.5 and 10.6 =====
 
@@ -3854,20 +3854,6 @@ Several parts of the original plan are not part of this deliverable. They are li
 
 \paragraph{E4 pipeline ablation evaluation.} \textit{Completed in this deliverable.} The full pipeline with identical experts was evaluated across 13 ablation conditions on 100 images, including margin, blending, smoothing width, region shape, and comparison with the E3 whole-image baseline.
 
-\section{Final Conclusion}
-\label{sec:final-conclusion}
-This work implements a region-based, domain-routed colorization pipeline and
-measures decomposition, routing, pretrained whole-image baselines, and pipeline
-ablations. The results identify incomplete coverage as a main limitation and
-show that routing accuracy varies by domain. E3 provides DDColor-T/L scores,
-including LPIPS and FID. E4 evaluates the full regional pipeline with
-identical experts across 13 ablation conditions, showing that the default
-pipeline (margin 0.2, smoothing 10 px, SAM masks, soft blending) matches or
-exceeds the whole-image DDColor-T baseline on reference-based metrics. The
-shared expert checkpoint means the evaluation cannot determine whether trained
-domain specialists would improve the result. That question requires separately
-trained experts and a broader, reproducible evaluation.
-
 \section{Plan for FYP-2}
 \label{sec:future-work}
 FYP-1 has completed the five-stage pipeline, evaluation tooling, automated
@@ -3933,6 +3919,20 @@ first two stages, which will be investigated alongside the work above.
 
 \paragraph{Consider a learned router.} The fixed lookup is simple and is correct for most regions. If the errors above cannot be removed by better prompts, a small learned classifier on the region content could replace it, at the cost of one more trained component.
 
+
+\section{Final Conclusion}
+\label{sec:final-conclusion}
+This work implements a region-based, domain-routed colorization pipeline and
+measures decomposition, routing, pretrained whole-image baselines, and pipeline
+ablations. The results identify incomplete coverage as a main limitation and
+show that routing accuracy varies by domain. E3 provides DDColor-T/L scores,
+including LPIPS and FID. E4 evaluates the full regional pipeline with
+identical experts across 13 ablation conditions, showing that the default
+pipeline (margin 0.2, smoothing 10 px, SAM masks, soft blending) matches or
+exceeds the whole-image DDColor-T baseline on reference-based metrics. The
+shared expert checkpoint means the evaluation cannot determine whether trained
+domain specialists would improve the result. That question requires separately
+trained experts and a broader, reproducible evaluation.
 
 \begin{comment}
 

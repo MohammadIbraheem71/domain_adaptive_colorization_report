@@ -1,6 +1,7 @@
 # Plan — Rework 7.3 Test Metrics
 
-Status: **implemented** (formatting/structure only). See section 5 for the result.
+Status: **implemented** (formatting/structure only). See section 5 for the
+7.3 result and section 6 for the Chapter 10 reordering.
 
 Goal: make Section 7.3 of `f26_066_report/main.tex` follow the structure of
 Section 7.3 in `sample.tex` (university ground truth), using the verified
@@ -162,6 +163,26 @@ Closing paragraph:
 - Page 98 is headed "CHAPTER 8. USER MANUAL" while it still contains the end
   of the 7.4 conclusion, because the chapter starts mid-page. Pre-existing;
   fix with a page break before `\chapter{User Manual}` if desired.
+
+## 6. Chapter 10 ordering
+
+Change: the FYP-2 plan must precede the conclusion, so that the chapter ends
+on the conclusion.
+
+- Moved `\section{Plan for FYP-2}` (`sec:future-work`, with its phased plan
+  table and all follow-up paragraphs) ahead of
+  `\section{Final Conclusion}` (`sec:final-conclusion`).
+- New order: 10.1 Summary of Work Done → 10.2 Findings → 10.3 Scope and
+  Objectives → 10.4 Challenges → 10.5 What Was Left Out and Why →
+  10.6 Plan for FYP-2 → 10.7 Final Conclusion.
+- Renamed the chapter from `Conclusion and Future Work` to
+  `Future Work and Conclusion` so the title matches the new order.
+- Section labels are unchanged, so the cross-reference from Section 9.7
+  (`Section~\ref{sec:future-work}`) still resolves.
+- No content was rewritten; the blocks were moved verbatim.
+
+Verification: `pdflatex` ×2, no undefined references, no new overfull boxes;
+TOC shows 10.6 Plan for FYP-2 followed by 10.7 Final Conclusion.
 
 ## Appendix — completed in earlier passes
 
