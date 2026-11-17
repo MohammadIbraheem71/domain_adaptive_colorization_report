@@ -418,6 +418,11 @@ The 2025 survey by Anwar et al. provides an extensive taxonomy of colorization a
 \hline
 \textbf{Author} & \textbf{Method} & \textbf{Results} & \textbf{Limitations} \\
 \hline
+\endfirsthead
+\caption[]{Summary of Relevant Literature (continued)}\\
+\hline
+\textbf{Author} & \textbf{Method} & \textbf{Results} & \textbf{Limitations} \\
+\hline
 \endhead
 \hline
 \endlastfoot
@@ -2539,7 +2544,7 @@ The design (Section~\ref{sec:extensibility}) requires adding a new expert withou
     \item \textbf{Verification}: Compare checksums of the four existing checkpoints before and after the addition to confirm they are unchanged.
     \item \textbf{Extensibility test}: Run the pipeline on existing-domain images before and after the addition. Measure IoU of region masks and FID/LPIPS of final outputs. Any difference arises only from the changed prompt string and overlap resolution (Section~\ref{sec:extensibility}).
 \end{enumerate}
-The existing experts' weights, code, and evaluation are untouched. The mechanism was validated by the test suite (Section~7.14).
+The existing experts' weights, code, and evaluation are untouched. The mechanism was validated by the test suite (Section~\ref{sec:test-metrics}).
 
 \subsection{Evaluation Tooling}
 \label{subsec:evaluation-tooling}
@@ -2638,7 +2643,7 @@ optional and depends on its external packages and feature model. The real-data
 COCO guard also remains conditional on access to the COCO annotations and
 images.
 \section{Test case Design and description}
-This section presents the test cases for all implemented components. The test suite comprises 176 automated tests covering decomposition, routing, extraction, colorization wrapper, blending, E4 pipeline ablations, evaluation metrics, plotting, test sets, baseline experiments, and end-to-end integration. Tests use synthetic data and model stand-ins, requiring no GPU or model weights. Representative cases are given in the full QA template format below; the complete list is summarized in Table~\ref{tab:a_test_summary}.
+This section presents the test cases for all implemented components. The test suite comprises 178 automated tests covering decomposition, routing, extraction, colorization wrapper, blending, E4 pipeline ablations, evaluation metrics, plotting, test sets, baseline experiments, test-ID generation, and end-to-end integration. Tests use synthetic data and model stand-ins, requiring no GPU or model weights. Representative cases are given in the full QA template format below; the complete list is summarized in Table~\ref{tab:a_test_summary}.
 
 The tests are organized around observable input-output behavior. Metric tests
 use small synthetic RGB images with known relationships, including identical,
@@ -2698,22 +2703,22 @@ Tests for these stages are written with pytest and use synthetic data: small ima
 \hline
 \endlastfoot
 Decomposition stage & Detections below the score threshold are removed; per-class non-maximum suppression keeps overlapping boxes of different labels; same-label fragments merge only when containment exceeds the threshold (including the exact-threshold case); resizing keeps the aspect ratio and leaves small images unchanged; merged labels are discarded without taking pixels; equal-area ties go to the higher score; summary fields are consistent; the full stage runs with stand-in models & 14 \\ \hline
-Label routing & Every prompt maps to its domain; merged and unknown labels are not routed; the optional word-matching mode works & 10 \\ \hline
-Overlaps, coverage, fallback & Smallest region wins; score rule; disjoint resolved masks; every pixel has one domain; shares sum to one; empty input; shape and rule errors are rejected & 10 \\ \hline
+Routing, overlaps, coverage and fallback & Every prompt maps to its domain; merged and unknown labels are not routed; the optional word-matching mode works; smallest region wins; score rule; disjoint resolved masks; every pixel has one domain; shares sum to one; empty input; shape and rule errors are rejected & 14 \\ \hline
 Evaluation logic & Class mapping validation, label offset choice, confusion matrix, group and domain IoU, coverage statistics, dominant ground-truth class, routing accuracy, saving and loading records & 29 \\ \hline
 Cached decomposer & Same output as the direct stage; model calls reused when only later parameters change; disk cache reused by a new instance & 3 \\ \hline
 Extraction, colorization wrapper, blending & Context-margin cropping (0.0--0.5) with clipping at image boundaries; extract\_input/map\_output round-trip preserves canvas shape and zeros outside crop; binary masks in box vs. mask mode; Blender dynamic $\sigma_k = \min(\sigma_0, \rho \cdot \min(w,h)/3)$ capped at $\sigma_0$; soft-mask values in $[0,1]$ and restricted to crop; blending\_off yields binary masks; weighted-average combination at overlaps; division-by-zero safety (uncovered $\to$ 0.0); no NaN/Inf in output; ColorizationConfig defaults and validation (negative margin/smoothing rejected, invalid shape rejected) & 31 \\ \hline
-Pipeline ablations (E4) & ConditionSpec generation covers all 13 ablations (default, 4 margins, blending\_off, 5 smoothing widths, shape\_box, E3 baseline); build\_expert\_registry maps all 5 slots to same checkpoint; evaluate\_colorization\_metrics returns PSNR/SSIM/Lab $\Delta$E/Boundary $\Delta$E/colorfulness/LPIPS with correct values for identical and different images; run\_pipeline\_for\_image\_ablations shares crop predictions across conditions with same margin (6 expert calls for 2 regions $\times$ 3 margins); results CSV schema and resumability (append\_result, load\_results, \_get\_existing\_pairs); CLI parser for make-lists/run/figures subcommands; ID loading priority (--id-list > e3\_ids.json > defaults) with validation (duplicates, missing keys); preflight\_image\_files detects missing JPEGs & 8 \\ \hline
+Pipeline ablations (E4) & ConditionSpec generation covers all 13 ablations (default, 4 margins, blending\_off, 5 smoothing widths, shape\_box, E3 baseline); build\_expert\_registry maps all 5 slots to same checkpoint; evaluate\_colorization\_metrics returns PSNR/SSIM/Lab $\Delta$E/Boundary $\Delta$E/colorfulness/LPIPS with correct values for identical and different images; run\_pipeline\_for\_image\_ablations shares crop predictions across conditions with same margin (6 expert calls for 2 regions $\times$ 3 margins); results CSV schema and resumability (append\_result, load\_results, \_get\_existing\_pairs); CLI parser for make-lists/run/figures subcommands; ID loading priority (--id-list > e3\_ids.json > defaults) with validation (duplicates, missing keys); preflight\_image\_files detects missing JPEGs & 11 \\ \hline
 Image quality metrics & PSNR (identical/different/known MSE), SSIM (identical/different/range), Lab $\Delta E_{00}$ (identical/different/symmetry), colorfulness (gray/colored/pure red/non-negative), mIoU (perfect/all-wrong/partial/absent classes), pixel coverage (full/half/none), routing accuracy (perfect/wrong/empty), confusion matrix (shape/diagonal/off-diagonal), boundary $\Delta E$ (identical/different), FID (identical/different/dimension mismatch), results CSV (save/load/append/roundtrip/precision) & 39 \\ \hline
 Plotting helpers & Metric bar plots (PSNR/SSIM/colorfulness), metric comparison plots, confusion matrix heatmaps, colorfulness distribution histograms, $\Delta E$ maps (identical/different/pure colors), all with optional file output & 18 \\ \hline
-Test sets and ID lists & Fixed set sizes (20 each) and no overlaps; COCO path resolution and named-set loading; manifest validation (valid/missing/wrong domain); annotation file errors (missing/malformed); real-data guard for COCO annotations & 5 \\ \hline
+Test sets and ID lists & Fixed set sizes (20 each) and no overlaps; COCO path resolution and named-set loading; manifest validation (valid/missing/wrong domain); annotation file errors (missing/malformed); real-data guard for COCO annotations & 6 \\ \hline
 Baseline experiment (E3) & Resize/LAB helpers (shape preservation, dtype, range); input validation (2D/finite/positive); whole-image colorization with mocked model; E3 orchestration (T/L variants, summary/FID/manifest CSV output, Inception features) & 8 \\ \hline
+Test ID generation & Canonical val2017 ID file: 20 images per set, no overlap between sets, domain pools built from COCO annotations, and every sampled identifier checked on disk & 4 \\ \hline
 Integration & Person A + Person B handover: synthetic luminance $\to$ routing $\to$ extraction $\to$ mock experts $\to$ blending $\to$ reconstruction; verifies domains, fallback, patch/output shapes, expert color at region center, valid 8-bit RGB & 1 \\ \hline
-\textbf{Total} & & \textbf{176} \\ \hline
+\textbf{Total} & & \textbf{178} \\ \hline
 \end{longtable}
 
 \subsection{Representative Test Cases in Full Template Format}
-The following test cases are presented in the full QA template format as representative examples of the 176-test suite.
+The following test cases are presented in the full QA template format as representative examples of the 178-test suite.
 
 \FloatBarrier
 \subsubsection{Expert Routing}
@@ -2986,8 +2991,75 @@ The following test cases are presented in the full QA template format as represe
 
 
 \FloatBarrier
-\subsection{Conclusion}
-This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline and its evaluation tooling. The five pipeline stages (decomposition, routing, extraction, colorization, and blending) are implemented as pure NumPy/PyTorch modules. The web interface provides a CLI and HTML prototype; full Next.js/FastAPI integration is deferred to FYP-2. The E4 ablation runner implements margin-based prediction sharing, CSV-based resumability, and a four-command CLI. Extensibility is achieved through data-driven configuration, so adding a domain requires only data changes. The evaluation tooling provides 10 metrics, fixed COCO test sets with annotation validation, CSV result handling, and plotting. The 176-test suite covers all pipeline components using synthetic data and model stand-ins.
+\section{Test Metrics}
+\label{sec:test-metrics}
+This section summarises how the automated test suite is measured. It is
+separate from the evaluation metrics of Chapter~\ref{ch:results}: those
+measure the quality of colorized images, whereas the test metrics describe how
+much of the implementation the suite exercises and at which level.
+
+\paragraph{Test levels.} The suite combines three levels. Unit tests cover the
+decomposition stage, label routing, extraction, the colorization wrapper,
+blending, image-quality metrics, plotting, the E4 runner and the fixed test
+sets. They use synthetic arrays, rectangular masks and stand-ins for Grounding
+DINO, SAM and DDColor, so no GPU, pretrained checkpoint or COCO download is
+needed. A single integration test exercises the handover from routing through
+extraction and mock experts to blending and reconstruction. Data-validation
+tests use a small COCO-shaped fixture to check annotation files and named test
+sets.
+
+\paragraph{Suite composition.} Table~\ref{tab:test-modules} lists the test
+modules and the number of test functions in each. The counts are taken from the
+\texttt{tests/} directory of the implementation repository.
+
+\begin{table}[htbp]
+\centering
+\caption{Number of automated tests per module (178 in total).}
+\label{tab:test-modules}
+\begin{tabular}{l r}
+\hline
+\textbf{Test module} & \textbf{Tests} \\
+\hline
+\texttt{test\_metrics.py} & 39 \\
+\texttt{test\_seg\_eval.py} & 32 \\
+\texttt{test\_colorization.py} & 31 \\
+\texttt{test\_plotting.py} & 18 \\
+\texttt{test\_routing.py} & 14 \\
+\texttt{test\_decomposition.py} & 14 \\
+\texttt{test\_e4.py} & 11 \\
+\texttt{test\_test\_sets.py} & 6 \\
+\texttt{test\_e3\_baseline.py} & 5 \\
+\texttt{test\_generate\_test\_ids.py} & 4 \\
+\texttt{test\_e3\_experiment.py} & 3 \\
+\texttt{test\_integration.py} & 1 \\
+\hline
+\textbf{Total} & \textbf{178} \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Execution and status.} The suite runs with
+\texttt{python -m pytest} from the repository root in a Linux environment with
+Python 3.13 and pytest; it needs no GPU. All tests pass in the recorded
+environment. No coverage percentage or runtime is reported here, because both
+depend on the machine. The earlier count of 176 did not include
+\texttt{test\_generate\_test\_ids.py}, which was added with the canonical
+test-ID generator; that module contributes the remaining four tests.
+
+\section{Conclusion}
+This chapter described the implementation of the region-based Mixture-of-Experts
+colorization pipeline and its evaluation tooling. The five pipeline stages
+(decomposition, routing, extraction, colorization and blending) are implemented
+as separate NumPy/PyTorch modules, and the E4 runner adds margin-based
+prediction sharing, CSV resumability and a four-command CLI. Extensibility is
+data-driven, so adding a domain requires configuration and a checkpoint rather
+than changes to the other experts. The evaluation tooling provides ten
+image-quality metrics, fixed COCO test sets with annotation validation, CSV
+result handling and plotting. The 178-test suite covers these components at
+unit, integration and data-validation level using synthetic data and model
+stand-ins, and all tests pass in the recorded environment. The web interface
+remains a CLI and HTML prototype; its full Next.js/FastAPI integration is
+deferred to FYP-2.
 \chapter{User Manual}
 \label{ch:user-manual}
 \textcolor{red}{This chapter will be added in FYP-II.} Design a complete user manual of your application and add that in this chapter.
@@ -3002,7 +3074,141 @@ whole-image colorization baselines, and discusses how errors in early stages
 can affect the final output. Conclusions are limited to the datasets,
 subsets, and model conditions evaluated in this work.
 
+\section{Experimental Setup}
+\label{sec:experimental-setup}
+
+This section records the data, models, metrics and run configuration shared by
+the four experiments. The experiment-specific protocols and results are given
+in Sections~\ref{sec:e1-decomposition}--\ref{sec:e4-ablation}; this section
+describes what was actually executed.
+
+\paragraph{Datasets and splits.}
+Two dataset families were used. Region decomposition and routing were evaluated
+on COCO-Stuff~\cite{caesar2018cocostuff}, which provides a class label for every
+pixel of COCO 2017. The tuning split is a fixed random subset of 200 images from
+the official \texttt{train2017} split, sampled with seed 42. The test split is a
+fixed random subset of 500 images from the official \texttt{val2017} split,
+sampled with seed 43. The two ID lists are stored in \texttt{data\_lists/} and
+are disjoint; the tuning list is used only to select the five decomposition
+post-processing values, and the test list is opened only after those values have
+been fixed. Ground-truth maps are resized to the working resolution with
+nearest-neighbour interpolation, and the five scoring groups are those of
+Table~\ref{tab:a_groups}. Although the loader caps the longer image side at
+1024 pixels, the longest image in either split is 640 pixels, so no E1 or E2
+image was downscaled.
+
+The colorization experiments use 100 COCO val2017 images: 20 for each of the
+people, nature, urban and animals domains, plus 20 mixed-domain scenes. The
+canonical identifier file is generated by \texttt{scripts/generate\_test\_ids.py}
+with seed 0. The script scans the mounted val2017 files, builds the domain pools
+from the COCO annotations, samples exactly 20 images per set without overlap,
+and validates that every identifier exists on disk. The resulting lists are
+stored in \texttt{outputs/e3\_ids.json} and are shared by E3 and E4. The original
+colour image is used only as the reference; the pipeline receives its luminance
+channel, and the predicted chrominance is recombined with that luminance.
+
+\paragraph{Models.}
+Region decomposition uses Grounded-SAM. Grounding DINO
+(tiny variant)~\cite{liu2024groundingdino} receives one lower-case prompt string
+containing all domain prompts and returns boxes, scores and labels. Segment
+Anything (ViT-B)~\cite{kirillov2023sam} then turns each retained box into a
+binary mask. Both models are used as released, without fine-tuning. The
+decomposition settings selected on the tuning split are a box threshold of
+0.25, a text threshold of 0.30, a minimum detection score of 0.30, an NMS
+threshold of 0.50 and a same-label merge containment of 0.50. Overlapping
+regions are resolved in favour of the smaller region, with ties broken by the
+higher detection score; regions with an unknown label are discarded, and pixels
+covered by no region are assigned to the fallback expert.
+
+Colour is predicted by DDColor~\cite{ref9}. E3 uses the pretrained DDColor-T
+and DDColor-L checkpoints on whole images, at input sizes 256 and 512 pixels
+respectively. E4 uses DDColor-T as the expert model: all four expert slots and
+the fallback slot load the same pretrained checkpoint, at a 256-pixel input
+size. No network was trained or fine-tuned in any experiment, so the reported
+results measure the pipeline, not learned domain specialization.
+
+\paragraph{Experiment configuration.}
+E1 runs the complete decomposition on the 500 test images and accumulates a
+pixel confusion matrix over the five groups and four domains. E2 reads the
+decompositions cached by E1 and makes no model calls; each routed region is
+scored by the dominant labelled class inside its resolved mask. E3 runs the two
+whole-image DDColor variants on the 100 val2017 images. E4 runs the full
+regional pipeline on the same 100 images and changes one component at a time:
+the default configuration and four margins ($\rho=0.0,0.1,0.2,0.3$), soft
+blending versus binary paste, five smoothing widths
+($\sigma_0=2,5,10,15,20$ px), SAM masks versus filled bounding boxes, and the
+whole-image DDColor-T baseline. The default configuration uses
+$\rho=0.2$, $\sigma_0=10$ px, SAM masks and soft blending. Expert crops are
+expanded by the margin, resized bicubically to $256\times256$, and mapped back
+to the image. The 13 conditions share the expert prediction for each unique
+margin, so the sharing changes runtime but not any measured value.
+
+\begin{table}[htbp]
+\centering
+\caption{Configuration of the four experiments.}
+\label{tab:experiment-setup}
+\small
+\begin{tabular}{p{0.8cm}p{3.4cm}p{4.0cm}p{5.6cm}}
+\hline
+Exp. & Images & Model or conditions & Main measures \\
+\hline
+E1 & 200 COCO-Stuff train (tuning) and 500 val (test) & Grounded-SAM; five fixed decomposition values & Group and domain mIoU, pooled coverage, fallback fraction \\
+E2 & Same 500 cached test images & Fixed label-to-domain routing & Routing accuracy, per-domain accuracy, confusion matrix \\
+E3 & 100 COCO val2017 images (5 sets of 20) & DDColor-T and DDColor-L on whole images & PSNR, SSIM, Lab $\Delta E_{00}$, boundary $\Delta E_{00}$, colorfulness, LPIPS, FID \\
+E4 & Same 100 images & 13 regional-pipeline conditions with identical DDColor-T experts & Same image metrics as E3 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Metrics.}
+E1 reports the mean intersection-over-union of the five groups and of the four
+domains, computed from one pooled confusion matrix over all test images.
+Uncovered pixels count as false negatives of their true group and are never
+counted as false positives of another group. Coverage is the pooled fraction of
+all test pixels owned by a named region, and the fallback fraction is its
+complement. E2 reports the fraction of routed regions whose assigned domain
+matches the domain of the dominant ground-truth class, both overall and per
+domain, together with the domain confusion matrix. Regions with no labelled
+pixel, or with a dominant class outside the four domains, are excluded and
+counted separately.
+
+E3 and E4 report PSNR and SSIM against the original colour image, mean
+CIEDE2000 colour difference in Lab, and boundary $\Delta E_{00}$ over Sobel
+edge pixels of the ground-truth image after Gaussian smoothing
+($\sigma=2$). Colorfulness is the Hasler--S\"usstrunk score of the prediction
+and is descriptive rather than a fidelity measure. LPIPS is computed with the
+AlexNet backbone, and FID is computed from Inception-v3 features once per model
+and fixed set. Lower is better for Lab $\Delta E_{00}$, boundary
+$\Delta E_{00}$, LPIPS and FID; higher is better for PSNR and SSIM.
+
+\paragraph{Environment and outputs.}
+All experiments ran in Kaggle notebooks with a T4 GPU. The exact software
+versions are listed in Table~\ref{tab:a_tools}: Python 3.13.16, PyTorch
+2.11.0+cu130, torchvision 0.26.0, transformers 5.20.2, segment-anything 1.0,
+NumPy 2.1.3, Pillow 13.0.0 and Matplotlib 3.10.0. Results are written as
+per-image CSV records with the schema
+\texttt{(experiment, condition, image\_id, metric, value)}. The E1 and E2
+outputs are stored under \texttt{results/e1} and \texttt{results/e2}, the E3
+outputs under \texttt{outputs/}, and the E4 records in
+\texttt{results/e4/results.csv}. Existing records are skipped on a rerun, so an
+interrupted experiment can resume without recomputing completed images. The
+summary tables report the count, mean and standard deviation over images.
+
+\paragraph{Protocol and limitations.}
+The decomposition values were chosen by a one-pass coordinate sweep over the
+tuning split: each of the five settings was varied while the others stayed at
+their current best value, and the value with the highest mIoU was kept, with
+pooled coverage as the tie-breaker. E1 was then run once on the 500 test images
+with those values fixed, and E2 reused the cached decompositions. E3 and E4
+evaluate pretrained models; they do not train or fine-tune the experts. The E4
+comparison with DDColor-T therefore isolates the effect of regional processing
+and blending while the model weights are held constant. No paired significance
+test is reported, and the FID values use only 20 images per set, so they are
+treated as preliminary. Colourfulness is reported for description and is not
+interpreted as accuracy.
+
 \section{E1: Region Decomposition}
+\label{sec:e1-decomposition}
 
 \subsection{Purpose and Setup}
 The first experiment checks how well the decomposition stage finds the regions that the rest of the pipeline depends on. Every later stage works on these regions: a person that is missed here cannot be sent to the people expert, and a region with the wrong extent cannot be corrected later.
@@ -3132,6 +3338,7 @@ Figures~\ref{fig:a_e1_random} and~\ref{fig:a_e1_fail} show decompositions on six
 In the twelve failure cases, three patterns recur. In four images (kitchen, office, bathroom and bench scenes) no region was detected at all, although the ground truth contains labelled pixels of the scored groups. In four others, large regions were predicted, mostly as urban or nature, where the ground truth shows only a thin strip, a small patch or a different group. In the remaining examples, toys and a statue (teddy bears, a toy fish and a bust) were detected as animals or people, whereas the ground truth does not assign them to any scored group. These observations are limited to the examples shown; the pooled figures above describe the full test set. Among the six random examples, the train, pizza-table and baseball scenes agree well with the ground truth, whereas the zebra image contains a people region on the animal's head.
  
 \section{E2: Routing Accuracy}
+\label{sec:e2-routing}
  
 \subsection{Purpose and Setup}
 Routing is a fixed lookup from the label of a region to a domain, so its quality depends on the detector and on the table together. This experiment measures how often a region is sent to the expert that matches its content. It reuses the decompositions of the 500 test images from E1 and needs no model calls.
@@ -3271,24 +3478,6 @@ condition. Colorfulness is descriptive and should not be interpreted as
 accuracy. The comparisons are descriptive; no paired significance test is
 reported. FID values based on 20 images per set are especially sensitive to
 sample size.
-
-\section{Overall Discussion}
-\label{sec:overall-discussion}
-
-On the 500-image E1 test subset, decomposition reached 0.624 mIoU over five
-groups and 0.630 mean IoU over the four domains. Pooled pixel coverage was
-0.427, leaving 0.573 of pixels for the fallback; every image had some
-uncovered area. Most E1 errors were missed pixels rather than pixels assigned
-to a wrong group. E2 correctly routed 1,886 of 2,046 scored regions, giving
-0.922 overall accuracy; the unweighted mean of the four domain accuracies was
-0.817. Routing was strongest for people and nature and weaker for animals and
-urban regions.
-
-These results explain how early-stage errors can affect later colorization.
-A missed or incomplete region cannot provide the intended content to its
-expert slot, while a wrong route selects a mismatched slot. Blending may
-soften transitions but cannot recover missing coverage or repair an incorrect
-route. The large fallback share also makes fallback quality consequential.
 
 \section{E4: Pipeline Control and Component Ablation}
 \label{sec:e4-ablation}
@@ -3445,6 +3634,64 @@ values are preliminary because each set has only 20 samples. Full evaluation
 of the pipeline's effect is now supported by the E4 results alongside E1
 and E2.
 
+\section{Overall Discussion}
+\label{sec:overall-discussion}
+
+On the 500-image E1 test subset, decomposition reached 0.624 mIoU over five
+groups and 0.630 mean IoU over the four domains. Pooled pixel coverage was
+0.427, leaving 0.573 of pixels for the fallback; every image had some
+uncovered area. Most E1 errors were missed pixels rather than pixels assigned
+to a wrong group. E2 correctly routed 1,886 of 2,046 scored regions, giving
+0.922 overall accuracy; the unweighted mean of the four domain accuracies was
+0.817. Routing was strongest for people and nature and weaker for animals and
+urban regions.
+
+These results explain how early-stage errors can affect later colorization.
+A missed or incomplete region cannot provide the intended content to its
+expert slot, while a wrong route selects a mismatched slot. Blending may
+soften transitions but cannot recover missing coverage or repair an incorrect
+route. The large fallback share also makes fallback quality consequential.
+
+E4 adds the end-to-end component view. With identical experts, the default
+configuration (margin 0.2, smoothing width 10 px, SAM masks and soft blending)
+closely matches the whole-image DDColor-T baseline: PSNR and boundary
+$\Delta E_{00}$ are better (22.83 vs.\ 22.56 dB and 11.32 vs.\ 11.43), Lab
+$\Delta E_{00}$ is nearly equal (10.22 vs.\ 10.25), and SSIM is 0.005 lower
+(0.906 vs.\ 0.911). Among the tested margins, 0.2 gives the best PSNR and a
+boundary error within 0.01 of the best; soft blending lowers boundary error
+relative to binary paste; 20 px is the best of the tested smoothing widths;
+and bounding boxes improve every E4 metric relative to SAM masks. Because
+every slot loads the same checkpoint, these comparisons isolate the regional
+processing and blending from expert specialization.
+
+\section{Conclusion}
+\label{sec:results-conclusion}
+
+E1 showed that the decomposition stage works where it produces regions, but
+that its coverage is limited: 0.624 group mIoU and 0.427 pooled coverage, so
+more than half of all pixels fall back to the default expert. E2 showed that
+routing is accurate overall (0.922) but uneven, with people and nature above
+0.92 and animals and urban scenes between 0.66 and 0.68.
+
+E3 established the whole-image reference points: DDColor-T gave PSNR 22.56 dB
+and SSIM 0.911 on the 100-image sets, while DDColor-L was stronger on PSNR,
+LPIPS and Lab $\Delta E_{00}$ in all five sets and on FID in four of five.
+
+E4 showed that the full pipeline with identical experts is competitive with
+whole-image DDColor-T. The default configuration is better on PSNR, Lab
+$\Delta E_{00}$ and boundary $\Delta E_{00}$, slightly worse on SSIM and
+LPIPS, and lower in colorfulness. Margin 0.2 gave the best PSNR among the
+tested margins, and soft blending, 20 px smoothing and bounding-box regions
+were the best tested choices for their respective components.
+
+The main limitations are the fallback-dominated coverage, the weaker routing
+for animals and urban content, and the small 20-image sets used for E3 and E4,
+which make the FID estimates preliminary. The results establish that the
+pipeline runs end to end and can match a whole-image baseline on reference
+metrics. They do not establish a benefit from separately trained domain
+experts, because all slots shared one checkpoint. That question requires the
+FYP-2 training work.
+
 \clearpage
 \chapter{Conclusion and Future Work}
 \label{ch:conclusion}
@@ -3529,13 +3776,46 @@ Several parts of the original plan are not part of this deliverable. They are li
 
 \paragraph{E4 pipeline ablation evaluation.} \textit{Completed in this deliverable.} The full pipeline with identical experts was evaluated across 13 ablation conditions on 100 images, including margin, blending, smoothing width, region shape, and comparison with the E3 whole-image baseline.
 
-\section{Future Work}
+\section{Final Conclusion}
+\label{sec:final-conclusion}
+This work implements a region-based, domain-routed colorization pipeline and
+measures decomposition, routing, pretrained whole-image baselines, and pipeline
+ablations. The results identify incomplete coverage as a main limitation and
+show that routing accuracy varies by domain. E3 provides DDColor-T/L scores,
+including LPIPS and FID. E4 evaluates the full regional pipeline with
+identical experts across 13 ablation conditions, showing that the default
+pipeline (margin 0.2, smoothing 10 px, SAM masks, soft blending) matches or
+exceeds the whole-image DDColor-T baseline on reference-based metrics. The
+shared expert checkpoint means the evaluation cannot determine whether trained
+domain specialists would improve the result. That question requires separately
+trained experts and a broader, reproducible evaluation.
+
+\section{Plan for FYP-2}
 \label{sec:future-work}
 FYP-1 has completed the five-stage pipeline, evaluation tooling, automated
 tests, and E1--E4 experiments. The domain slots currently share a pretrained
 DDColor-T checkpoint, so the results do not yet establish the benefit of
 domain specialization. The FYP-2 plan builds on this implementation through
 the following remaining activities.
+
+\begin{table}[htbp]
+\centering
+\caption{Phased plan for FYP-2.}
+\label{tab:fyp2-plan}
+\small
+\begin{tabular}{p{0.9cm}p{4.4cm}p{8.6cm}}
+\hline
+\textbf{Phase} & \textbf{Work} & \textbf{Deliverable} \\
+\hline
+1 & Prepare domain splits and training pipeline & Reproducible training configurations and checkpoint management \\
+2 & Fine-tune four domain experts & People, nature, urban and animal DDColor-T checkpoints \\
+3 & Integrate and evaluate trained experts & Comparison with DDColor-T/L and the pooled baseline; shuffled-routing ablation \\
+4 & Add and evaluate a fifth expert & Vehicles expert, with the existing checkpoints unchanged \\
+5 & Complete the web interface & Next.js frontend and FastAPI backend connected to the Python pipeline \\
+6 & Broaden the evaluation & Full validation split or ADE20K; improved prompts and coverage; optional learned router \\
+\hline
+\end{tabular}
+\end{table}
 
 \paragraph{Fine-tune the domain experts.} Prepare disjoint training,
 validation, and test splits for the people, nature, urban, and animal domains.
@@ -3575,20 +3855,6 @@ first two stages, which will be investigated alongside the work above.
 
 \paragraph{Consider a learned router.} The fixed lookup is simple and is correct for most regions. If the errors above cannot be removed by better prompts, a small learned classifier on the region content could replace it, at the cost of one more trained component.
 
-
-\section{Final Conclusion}
-\label{sec:final-conclusion}
-This work implements a region-based, domain-routed colorization pipeline and
-measures decomposition, routing, pretrained whole-image baselines, and pipeline
-ablations. The results identify incomplete coverage as a main limitation and
-show that routing accuracy varies by domain. E3 provides DDColor-T/L scores,
-including LPIPS and FID. E4 evaluates the full regional pipeline with
-identical experts across 13 ablation conditions, showing that the default
-pipeline (margin 0.2, smoothing 10 px, SAM masks, soft blending) matches or
-exceeds the whole-image DDColor-T baseline on reference-based metrics. The
-shared expert checkpoint means the evaluation cannot determine whether trained
-domain specialists would improve the result. That question requires separately
-trained experts and a broader, reproducible evaluation.
 
 \begin{comment}
 
