@@ -12,6 +12,30 @@
 \usepackage{tabularx}
 \usepackage{seqsplit}
 \newcommand{\tcbrk}[1]{\seqsplit{#1}}
+\setlength{\headheight}{14pt}
+\setlength{\emergencystretch}{2em}
+% Use compact, fixed spacing around floats instead of stretching gaps.
+\setlength{\floatsep}{8pt}
+\setlength{\textfloatsep}{10pt}
+\setlength{\intextsep}{8pt}
+\setlength{\LTpre}{6pt}
+\setlength{\LTpost}{6pt}
+\captionsetup{skip=5pt}
+\titlespacing*{\section}{0pt}{14pt}{7pt}
+\titlespacing*{\subsection}{0pt}{11pt}{5pt}
+\titlespacing*{\subsubsection}{0pt}{9pt}{4pt}
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.9}
+\setcounter{topnumber}{4}
+\setcounter{bottomnumber}{3}
+\setcounter{totalnumber}{6}
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{8pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
 \begin{document}
 \newcommand{\supervisor}{Junaid Hussain Muzamal}
 \newcommand{\university}{National University of Computer and Emerging Sciences, Lahore}
@@ -78,26 +102,26 @@ This states Authors’ declaration that the work presented in the report is thei
 \pagebreak
 
 \section*{Abstract}
-Colorizing grayscale photographs is an underconstrained problem, and a single model must cover very different kinds of content. This project proposes a region-based Mixture-of-Experts framework for domain-adaptive colorization. Grounded-SAM divides a grayscale image into semantic regions, each region is routed by its text prompt to one of four domain experts (portraits and people, nature and landscapes, urban and man-made scenes, animals), and the expert outputs are merged with soft masks. The experts are fine-tuned copies of DDColor, and a new expert can be added without retraining the others. This report presents the method, the system design, and the plan for evaluating it against general-purpose baselines.
+Colorizing grayscale photographs is an underconstrained problem because different colors can have similar brightness. This project implements a region-based Mixture-of-Experts framework for domain-adaptive colorization. Grounded-SAM detects semantic regions, a fixed prompt-to-domain mapping routes them to four expert slots, and contextual crop predictions are combined using soft masks and a fallback for uncovered pixels. FYP-1 completed the five-stage pipeline, evaluation tooling, automated tests, and experiments on decomposition, routing, whole-image baselines, and pipeline ablations. The current domain and fallback slots use the same pretrained DDColor-T checkpoint, so these experiments assess regional processing rather than learned domain specialization. Separate expert fine-tuning, comparison with a pooled-data baseline, a trained fifth-expert evaluation, and integration of the proposed web interface remain for FYP-2. The report presents the implemented method, its measured limitations, and the plan for completing and evaluating the specialized framework.
 \pagebreak
 
 \section*{Executive Summary}
 
-A grayscale photograph does not contain enough information to determine the original colors of the objects in it, so colorization often has several plausible answers. General-purpose colorization models must handle everything (including people, animals, landscapes, and buildings) with one set of weights, and they are reported to produce desaturated colors, semantic inconsistencies, and color drift between domains.
+A grayscale photograph admits several plausible colorizations. This project investigates whether semantic decomposition and domain-based processing can improve colorization while retaining a coherent image. General-purpose models provide the baselines for examining this approach.
 
-This project develops a region-based Mixture-of-Experts framework for domain-adaptive colorization. A pretrained open-vocabulary segmentation model, Grounded-SAM, is used to divide a grayscale photograph into semantic regions using predefined text prompts. Each region is cropped with a surrounding margin (20\% by default, adjustable for testing) and routed by its prompt to one of four domain experts: portraits and people, nature and landscapes, urban and man-made scenes, and animals. The experts are fine-tuned copies of the DDColor network with independent weights. They predict only the color channels in the Lab color space, so the brightness and detail of the original photograph are kept unchanged. The outputs are merged with soft mask boundaries to avoid visible seams, and pixels that no region covers are colorized by a fallback expert. A new expert can be added by defining new prompts and training one network. This does not require any modification of the existing pipeline and experts.
+Grounded-SAM detects regions from predefined prompts. A fixed lookup assigns each region to one of four domain slots: people, nature, urban scenes, and animals. Context-expanded crops receive DDColor chrominance predictions, and soft masks combine these predictions with grayscale lightness. Uncovered pixels receive a fallback prediction. All slots currently use the same pretrained DDColor-T checkpoint; independently fine-tuned specialists remain planned.
 
 The project has five objectives: identify semantic regions across the four domains, train a specialized colorization expert for each domain, route detected regions to the correct expert, merge the expert outputs with smooth transitions, and demonstrate the addition of a further expert without retraining the existing ones.
 
-The system is a pipeline of subsystems (region decomposition, routing, region extraction and expert colorization, and blending) that a central controller calls in order. A basic web interface lets a user upload a grayscale image and view the result. The system is developed iteratively and is expected to be trained and run on free cloud notebook resources, which limits it to a single GPU of moderate memory.
+The five-stage pipeline runs through Python scripts, a CLI, and evaluation notebooks. A standalone HTML concept simulates the proposed interaction without calling the models. Integration of a Next.js frontend and FastAPI backend remains for FYP-2. FYP-1 experiments used cloud notebook GPU resources.
 
-Each stage is measured separately. Segmentation is measured with mean intersection-over-union and routing with routing accuracy. Colorization quality is measured with FID, LPIPS, colorfulness, PSNR, SSIM, and Lab color difference, and seams with the color difference across region boundaries. The framework is compared with three general-purpose baselines (pretrained DDColor-T, DDColor-T fine-tuned on pooled data from all four domains, and pretrained DDColor-L) on single-domain and mixed-scene test sets. Ablations vary the blending, the crop margin, the routing, and the use of segmentation masks, and the extensibility claim is tested by adding a fifth expert.
+The completed E1 and E2 experiments measure decomposition quality, coverage, and region-count routing accuracy. E3 compares pretrained DDColor-T and DDColor-L on whole images; E4 evaluates regional processing with shared weights. Image measures include PSNR, SSIM, CIEDE2000 color difference, reference-edge error, LPIPS, and colorfulness. E3 also reports FID. The results show limited coverage, uneven routing across domains, and metric-specific trade-offs against whole-image inference.
 
-The project covers still photographs. Video and medical images are outside its scope. The generated colors are plausible interpretations, since historical color accuracy cannot be established from a grayscale image alone. The quality of the result also heavily depends on the quality of outputs produced by the segmentation model(s), because a region that is missed or labeled wrongly is not colorized by the intended expert.
+The project covers still photographs; video and medical images are outside scope. Generated colors are plausible interpretations rather than verified historical colors. Missed or mislabeled regions can affect routing and reconstruction, so intermediate results are evaluated alongside the final image.
 
-The literature review, the choice of datasets, the methodology, and the system design are complete, and a standalone prototype of the region decomposition stage has been built. The remaining stages are planned for the second phase: routing and region extraction, fine-tuning of the four experts, blending, the web interface, the evaluation against the baselines, and the extensibility demonstration.
+FYP-1 completed the study, design, five-stage implementation, evaluation tooling, automated tests, and E1--E4 experiments. FYP-2 will fine-tune the four experts, train the pooled-data baseline, evaluate distinct experts and shuffled routing, demonstrate a trained fifth expert, integrate the web interface, and broaden evaluation. Whether domain specialization improves colorization remains unestablished.
 
-The project relates to SDG 11, Target 11.4, the protection of cultural heritage, because colorized versions of historical photographs can supplement the original monochrome records.
+The project relates to SDG 11, Target 11.4, by supporting supplementary colorized presentations of historical photographs while preserving the original monochrome records.
 \pagebreak
 
 
@@ -112,6 +136,7 @@ The project relates to SDG 11, Target 11.4, the protection of cultural heritage,
 \addcontentsline{toc}{chapter}{List of Tables}
 
 \mainmatter
+\raggedbottom
 
 
 \chapter{Introduction}
@@ -119,10 +144,10 @@ Image colorization involves assigning plausible colors to grayscale images while
 
 Recent approaches have explored how semantic understanding and visual context can improve colorization \cite{ref2,ref9,ref11}. DDColor \cite{ref9} combines a pixel decoder with a query-based color decoder to connect spatial features with semantic color representations and reduce color bleeding. Its findings demonstrate the importance of considering both image structure and object meaning when predicting colors. Nevertheless, these findings do not establish that a single model is inherently incapable of handling multiple domains; rather, they motivate further investigation into alternative ways of organizing colorization expertise.
 
-The proposed project, Mixture of Experts Framework for Domain Adaptive Colorization, investigates a region-based alternative. Instead of assigning an entire photograph to one colorization model, the system will identify semantic regions and route them to experts specializing in portraits and people, nature and landscapes, urban and man-made scenes, and animals. The resulting outputs will be combined into a single color image. The project aims to evaluate whether this division of responsibility improves domain-specific color quality and semantic consistency while maintaining coherence across the complete photograph.
+The project, Mixture of Experts Framework for Domain Adaptive Colorization, investigates a region-based alternative. The implemented pipeline identifies semantic regions, routes them to slots for portraits and people, nature and landscapes, urban and man-made scenes, and animals, and combines their crop predictions into one image. FYP-1 evaluates this architecture with shared pretrained weights. FYP-2 will test whether separately fine-tuned experts improve domain-specific color quality and semantic consistency while maintaining coherence across the photograph.
 
 \section{Purpose of this Document}
-This document outlines the proposed framework for the FYP Development Phase 1 report, establishing a shared understanding among the development team, supervisor, and evaluation panel by detailing the research motivation, objectives, scope, and planned evaluation while distinguishing completed initial study work from pending implementation and experiments. The central research question investigates whether semantic region decomposition combined with domain-specialized colorization experts can enhance color quality and consistency relative to general-purpose colorization approaches. The methodology integrates pretrained Grounded-SAM for region identification, prompt-based routing mechanisms, separately trained domain-specific experts, and a blending module to synthesize results. Evaluation will comprehensively assess segmentation quality, routing accuracy, domain-level colorization performance, boundary consistency, and overall image quality metrics. While the project aims to produce perceptually convincing colorizations, it explicitly acknowledges that historical color authenticity cannot be determined solely from grayscale information.
+This FYP-1 report documents the research motivation, objectives, requirements, design, implementation, and completed evaluation of the region-based colorization framework. It distinguishes the implemented pipeline and E1--E4 experiments from the remaining expert-training, extensibility, and interface-integration work. The central research question is whether semantic decomposition combined with domain-specialized experts can improve color quality relative to general-purpose approaches. The current shared-checkpoint experiments establish the pipeline's operation and limitations; they do not yet answer the specialization question. Generated colors are plausible interpretations, and historical color authenticity cannot be established from grayscale information alone.
 \section{Intended Audience}
 The primary audience for this document comprises the project supervisor and academic evaluation panel, who will assess the project's motivation, feasibility, technical approach, and alignment with its stated objectives, while also supporting the development team by clearly defining the system's boundaries and expected behavior. A secondary audience includes researchers and students interested in image colorization, semantic segmentation, and modular expert-based architectures, as well as practitioners in historical preservation or digital media who may use the document to understand the proposed application and its limitations. Although the document is structured to be accessible, technical knowledge of machine learning and image processing will be helpful for fully interpreting the architecture design and evaluation measures.
 \section{Definitions, Acronyms, and Abbreviations}
@@ -136,24 +161,24 @@ The following terms are used throughout this document:\\
 \textbf{SSIM}: Structural Similarity Index Measure\\
 \textbf{SDG}: Sustainable Development Goal
 \section{Conclusion}
-In conclusion, the proposed Mixture of Experts Framework for Domain-Adaptive Colorization aims to improve grayscale image colorization by using specialized experts instead of relying on a single general-purpose model. The system will divide an image into meaningful regions and assign them to experts for portraits and people, nature and landscapes, urban and man-made scenes, and animals. By combining semantic region decomposition, expert routing, contextual colorization, and output blending, the project aims to generate more plausible and visually coherent color images.
+The project investigates grayscale colorization through semantic decomposition, expert routing, contextual crops, and output blending. FYP-1 implemented and evaluated these stages with pretrained DDColor-T occupying all domain slots. The remaining work is to train distinct domain experts and evaluate their contribution, demonstrate extensibility, and connect the proposed web interface. These phase boundaries guide the vision, requirements, and methodology in the following chapters.
 \chapter{Project Vision}
-The project envisions a photographic colorization system that combines domain-specific expertise within a single processing framework. A photograph may contain several types of content, and the system will allow different regions to receive different expert treatment. The intended outcome is a working prototype through which the benefits and limitations of this region-based approach can be examined.
+The project envisions a photographic colorization system that combines domain-specific expertise within a single framework. A photograph may contain several types of content, and the implemented pipeline allows different regions to be assigned to different domain slots. The FYP-1 prototype uses a shared pretrained checkpoint; separately trained experts remain part of the FYP-2 vision.
 \section{Problem Domain Overview}
-The project belongs to the domain of automatic image colorization. Its input will be a grayscale photograph, and its output will be a colorized version produced through semantic decomposition, expert routing, specialized processing, and blending. The four initial expert domains are portraits and people, nature and landscapes, urban and man-made scenes, and animals. These domains describe expert responsibilities rather than mutually exclusive categories of complete photographs.
+The project belongs to the domain of automatic image colorization. Its input is a grayscale photograph, and its output is a colorized image produced through semantic decomposition, routing, contextual crop processing, and blending. The four initial domains are portraits and people, nature and landscapes, urban and man-made scenes, and animals. These domains describe expert responsibilities rather than mutually exclusive categories of complete photographs.
 
-Research on automatic colorization demonstrates the importance of considering multiple plausible colors and the surrounding scene context \cite{ref1,ref11}. Cong et al. \cite{ref11} propose generating reference images that guide colorization and permit localized modifications. Cong et al. Their work supports the relevance of contextual color reasoning, although reference generation and interactive editing are not components of the proposed project. The present framework instead investigates whether separately trained domain experts can provide useful specialization.
+Research on automatic colorization demonstrates the importance of considering multiple plausible colors and the surrounding scene context \cite{ref1,ref11}. Cong et al. \cite{ref11} propose generating reference images that guide colorization and permit localized modifications. Their work supports the relevance of contextual color reasoning, although reference generation and interactive editing are not components of the proposed project. The present framework instead investigates whether separately trained domain experts can provide useful specialization.
 
-For region decomposition, the project will use pretrained Grounded-SAM \cite{ref17} with predefined prompts such as person, animal, building, sky, and vegetation. Grounded-SAM combines Grounding DINO \cite{liu2024groundingdino} with SAM \cite{kirillov2023sam} to support detection and segmentation based on text inputs. This provides a basis for identifying regions associated with the project's expert domains without requiring users to enter prompts manually.
+For region decomposition, the project uses pretrained Grounded-SAM \cite{ref17} with predefined prompts such as person, animal, building, sky, and vegetation. Grounded-SAM combines Grounding DINO \cite{liu2024groundingdino} with SAM \cite{kirillov2023sam} to support detection and segmentation based on text inputs. This provides a basis for identifying regions associated with the project's expert domains without requiring users to enter prompts manually.
 
-Each identified region will be cropped with an additional boundary whose size will be varied during testing to determine an appropriate value for retaining surrounding context. The cropped region will then be processed by its assigned expert, and soft-mask blending will combine the outputs. In this project, MoE refers to region-level selection among separate colorization networks, rather than token-level routing within a transformer. Together, the related research motivates the use of semantics and context, while the effectiveness of the proposed region--expert combination remains an experimental question.
+Each identified region is cropped with a contextual margin and processed through its assigned expert slot. Soft-mask blending combines the outputs. The current experiments vary the margin and blending settings with model weights held fixed. In this project, MoE refers to region-level selection among separate expert slots, rather than token-level routing within a transformer. Whether independently trained experts improve this regional architecture remains an experimental question for FYP-2.
 \section{Problem Statement}
 Existing automatic image-colorization methods typically rely on a single model to colorize all types of photographic content. However, general-purpose models are reported to produce desaturated colors \cite{ref1,ref6} and semantic color errors \cite{ref9}, and it remains an open question whether handling visually different domains with one set of weights causes further inconsistencies between them. Developing a unified model that handles these conflicting visual domains remains a recognized challenge. To address this, we are developing a Mixture of Experts framework that routes semantic image regions to domain-specialized colorization experts. The project aims to improve domain-specific color quality and semantic consistency while maintaining coherence across the complete photograph.
 \section{Problem Elaboration}
 Automatic image colorization must assign plausible colors to diverse visual content despite the absence of explicit chromatic information. Objects with similar grayscale appearances may have different plausible colors, so producing a convincing colorization is not the same as exactly matching a reference image. This ambiguity makes it difficult for a single general-purpose model to handle all types of scenes without encouraging desaturated outputs or semantically inconsistent colors. A photograph may contain people, animals, vegetation, buildings, and other elements simultaneously. The system must identify these regions and associate them with suitable domain-specialized experts. Missed objects, incomplete masks, or ambiguous prompt matches could affect routing and subsequent colorization. Each expert will be trained on whole images from its domain but will receive cropped regions during pipeline operation, with a surrounding boundary intended to retain useful context. Experts operating separately may also make different color decisions for neighboring regions, so soft-mask blending is used to reduce visible seams. The project must assess both local boundary behavior and the quality of the complete output. The framework is further required to support the addition of new experts through extra models and prompt sets without retraining existing ones.
 \section{Goals and Objectives}
 The overall goal is to develop and evaluate a Mixture of Experts framework that converts grayscale photographs into plausible color images through domain-specialized processing.\\
-The specific objectives are:
+The following objectives describe the full project across FYP-1 and FYP-2. Their current status is summarized in Section~\ref{sec:objectives-status}:
 \begin{itemize}
     \item  Identify semantic regions: Investigate region decomposition across the four selected domains and measure segmentation quality using mIoU on a labeled dataset such as COCO-Stuff \cite{caesar2018cocostuff}.
     \item Develop domain experts: Train a specialized colorization model for each domain. Evaluate held-out outputs using FID, LPIPS, colorfulness, and PSNR/SSIM or Lab color difference against reference images.
@@ -162,16 +187,16 @@ The specific objectives are:
     \item Demonstrate extensibility: Add a further expert and its associated prompt set without modifying or retraining the existing experts.
 \end{itemize}
 \section{Project Scope}
-The project covers the design, development, and evaluation of a working prototype for grayscale photographic colorization. It focuses on four initial domains and supports photographs containing multiple domain types. Its main components are semantic region decomposition, domain-based routing, separately trained colorization experts, contextual cropping, and output blending.\\
-The initial study has identified the following candidate datasets:
+The project covers the design, development, and evaluation of a working prototype for grayscale photographic colorization. It focuses on four initial domains and supports photographs containing multiple domain types. Its main components are semantic region decomposition, domain-based routing, expert colorization, contextual cropping, and output blending. FYP-1 implements these stages using a shared pretrained checkpoint. Separate domain training, the pooled baseline, the fifth-expert evaluation, and full web integration remain for FYP-2.\\
+The initial study identified the following candidate datasets for FYP-2 domain training; the completed FYP-1 experiments use COCO and COCO-Stuff:
 \begin{itemize}
     \item Portraits and people: CelebA \cite{celeba2015}, CelebA-HQ \cite{pggan2018}, FFHQ \cite{ffhq2019}, DeepFashion-MultiModal \cite{text2human2022}, and COCO \cite{ref19} person images.
     \item Nature and landscapes: Places365 \cite{places365} and SUN397 \cite{sun397}.
     \item Urban and man-made scenes: Cityscapes \cite{ref20}, ADE20K \cite{ref18}, and urban subsets of Places365 \cite{places365}.
     \item Animals: AFHQ \cite{afhq2020}, Oxford-IIIT Pets \cite{pets2012}, and animal subsets of COCO \cite{ref19}.
 \end{itemize}
-Experts will be trained using color images from their respective domains, with grayscale inputs derived from the L channel in Lab space. This supplies paired training examples without manually annotating colors. A labeled segmentation dataset such as COCO-Stuff \cite{caesar2018cocostuff} will support evaluation of region decomposition.\\
-The project deliverables will include:
+Experts will be trained using color images from their respective domains, with grayscale inputs derived from the L channel in Lab space. This supplies paired training examples without manually annotating colors. COCO-Stuff \cite{caesar2018cocostuff} supports the completed evaluation of region decomposition. The proposed domain-training conversion is distinct from the working-grayscale preprocessing used by the current E4 runner (Section~\ref{sec:b_colorization}).\\
+The full-project deliverables are listed below. The integrated pretrained pipeline and its initial evaluation are complete; trained specialists and the extensibility demonstration remain for FYP-2:
 \begin{itemize}
     \item A working prototype integrating region decomposition, routing, expert inference, and blending.
     \item Four domain-specialized models trained for the initial expert categories.
@@ -179,7 +204,7 @@ The project deliverables will include:
     \item An extensibility demonstration showing incorporation of an additional expert and prompt set.
 \end{itemize}
 \section{Sustainable Development Goal (SDG)}
-The Sustainable Development Goal targeted by this project is Goal 11: Sustainable Cities and Communities. The project relates to Target 11.4, which focuses on protecting and safeguarding cultural and natural heritage. The proposed colorization framework can support the presentation and interpretation of historical grayscale photographs through supplementary colorized versions. This may make historical visual content more accessible and engaging for viewers and researchers. However, the generated colors will represent plausible interpretations, while the original monochrome photographs will remain the primary historical records. The complete SDG list is shown in Figure \ref{fig:1}.
+The Sustainable Development Goal targeted by this project is Goal 11: Sustainable Cities and Communities. The project relates to Target 11.4, which focuses on protecting and safeguarding cultural and natural heritage. The proposed colorization framework can support the presentation and interpretation of historical grayscale photographs through supplementary colorized versions. This may make historical visual content more accessible and engaging for viewers and researchers. However, the generated colors will represent plausible interpretations, while the original monochrome photographs will remain the primary historical records. The icon for the targeted goal is shown in Figure~\ref{fig:1}.
 \begin{figure} [!h]
     \centering
 \includegraphics[width=0.7\textwidth]{Figures/Figure-2.1.jpg}
@@ -406,14 +431,17 @@ This work is closely related to the proposed project because both use regional p
 
 The proposal identifies several public datasets for constructing domain-specific training sets, including CelebA \cite{celeba2015}, CelebA-HQ \cite{pggan2018}, FFHQ \cite{ffhq2019}, DeepFashion-MultiModal \cite{text2human2022}, COCO \cite{ref19}, Places365 \cite{places365}, SUN397 \cite{sun397}, Cityscapes \cite{ref20}, ADE20K \cite{ref18}, AFHQ \cite{afhq2020}, and Oxford-IIIT Pets \cite{pets2012}. The proposal also specifies that grayscale training inputs are derived from the L channel of Lab-space color images and that COCO-Stuff \cite{caesar2018cocostuff} is used to evaluate region decomposition.
 
-COCO provides object-level annotations and instance segmentations in complex everyday scenes \cite{ref19}, and COCO-Stuff extends these images with pixel-level labels for background classes such as sky, grass, tree, and water \cite{caesar2018cocostuff}. Because it covers both object and background classes, COCO-Stuff is the dataset used to evaluate region decomposition and routing in this project. ADE20K contains dense scene and object annotations and provides a scene-parsing benchmark covering 150 object and stuff categories \cite{ref18}, and Cityscapes provides detailed semantic and instance annotations for urban street scenes \cite{ref20}. Both are relevant to the urban and man-made domain and serve as sources of training images for its expert.
+COCO provides object-level annotations and instance segmentations in complex everyday scenes \cite{ref19}, and COCO-Stuff extends these images with pixel-level labels for background classes such as sky, grass, tree, and water \cite{caesar2018cocostuff}. Because it covers both object and background classes, COCO-Stuff is the dataset used to evaluate region decomposition and routing in this project. ADE20K contains dense scene and object annotations and provides a scene-parsing benchmark covering 150 object and stuff categories \cite{ref18}, and Cityscapes provides detailed semantic and instance annotations for urban street scenes \cite{ref20}. Both are relevant candidate sources of urban and man-made training images for FYP-2.
 
 The 2025 survey by Anwar et al. provides an extensive taxonomy of colorization approaches, datasets, metrics, and evaluation protocols \cite{ref21}. It is particularly useful for the proposed project because it confirms the importance of evaluating colorization through multiple complementary measures rather than relying on a single image-quality metric.
 
 
 \section{Literature Review Summary Table}
 
-\begin{longtable}{|p{2.5cm}|p{4.2cm}|p{4.2cm}|p{3.8cm}|}
+{\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{\dimexpr0.18\textwidth-2\tabcolsep-1.25\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr0.28\textwidth-2\tabcolsep-1.25\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr0.28\textwidth-2\tabcolsep-1.25\arrayrulewidth\relax}|>{\raggedright\arraybackslash}p{\dimexpr0.26\textwidth-2\tabcolsep-1.25\arrayrulewidth\relax}|}
 \caption{Summary of Relevant Literature}\label{tab:literature-summary}\\
 \hline
 \textbf{Author} & \textbf{Method} & \textbf{Results} & \textbf{Limitations} \\
@@ -469,7 +497,7 @@ Cordts et al. \cite{ref20} & Provides semantic and instance labels for urban str
 Anwar et al. \cite{ref21} & Reviews colorization methods, datasets, training methods, and evaluation measures. & Provides a useful overview and comparison of existing colorization research. & Does not propose a region based Mixture of Experts colorization system. \\
 \hline
 \end{longtable}
-
+}
 
 The literature demonstrates three recurring characteristics of modern colorization research. First, grayscale-to-color prediction is inherently ambiguous, motivating probabilistic, generative, or multimodal approaches. Second, semantic and contextual information is essential for preventing incorrect or visually inconsistent colors. Third, MoE research provides a mechanism for separating conflicting knowledge across specialized components.
 
@@ -515,7 +543,7 @@ However, the reviewed literature does not establish a directly equivalent system
     
     \item Assignment of each region to one of four domain specific colorization experts.
     
-    \item Approximately 20\% contextual boundary expansion around each selected region.
+    \item A default context margin of 20\% of the region box dimensions on each side.
     
     \item Independent expert colorization.
     
@@ -538,13 +566,13 @@ The proposed project combines these ideas into a framework for photographic imag
 
 This project is a research prototype for testing domain adaptive image colorization with a Mixture of Experts framework. It is different from a normal software application because it does not need user accounts, transactions, or support for many users at the same time. Its main tasks are model training, semantic region detection, expert selection, colorization, blending, and evaluation.
 
-The system also keeps the output of each stage for inspection and debugging purposes. This is necessary because a good final image does not always mean that the segmentation and routing decisions were correct. For this reason, segmentation, routing, expert outputs, and blending will be checked separately before evaluating the complete result.
+The system also keeps the output of each stage for inspection and debugging purposes. This is necessary because a good final image does not always mean that the segmentation and routing decisions were correct. For this reason, segmentation, routing, and blending are evaluated separately as well as through the complete result. Specialist outputs will be evaluated after domain fine-tuning in FYP-2.
 
 This chapter explains what the system must do and the conditions under which it will be developed. It covers the main features, functional and nonfunctional requirements, quality attributes, assumptions, hardware and software needs, use cases, data handling, and possible risks.
 
 \section{List of Features}
 
-The main features planned for the prototype are listed below:
+The features below describe the full target prototype. FYP-1 implements the core pipeline and evaluation with shared pretrained weights. Domain-specific training, a fifth-expert demonstration, and a pipeline-connected web interface remain for FYP-2 (Section~\ref{sec:future-work}).
 
 \begin{itemize}
     \item Loading grayscale photographs as input.
@@ -553,7 +581,7 @@ The main features planned for the prototype are listed below:
     
     \item Dividing detected regions into four domains: people, nature and landscapes, urban and man made scenes, and animals.
     
-    \item Extracting each region with approximately 20\% extra surrounding area for context.
+    \item Extracting each region with a default context margin of 20\% of its box dimensions on each side.
     
     \item Sending each region to the expert that matches its domain.
     
@@ -596,7 +624,7 @@ The system shall find semantic regions using predefined prompts and Grounded SAM
 Masks are produced for the supported regions in the image. \\ \hline
 
 FR3 &
-The system shall extract every selected region with approximately 20\% extra surrounding area. &
+The system shall extract every selected region with a configurable context margin, defaulting to 20\% of its box width and height on each side. &
 The crop contains the detected region and some nearby image content. \\ \hline
 
 FR4 &
@@ -632,8 +660,8 @@ The system shall allow a new expert and prompt set to be added without retrainin
 The new expert works while the existing experts remain unchanged. \\ \hline
 
 FR12 &
-The system shall send a region to the fallback expert when it cannot be assigned to a suitable domain-specific expert. &
-A region with no suitable domain-specific assignment is processed by the fallback expert. \\ \hline
+The system shall record and discard regions whose labels cannot be routed, and send pixels left without a valid owner to the fallback expert. &
+Unassignable regions are recorded; pixels not covered by any retained region receive fallback colorization. \\ \hline
 
 \end{longtable}
 
@@ -730,9 +758,9 @@ The project is based on the following assumptions:
     
     \item Video and medical image colorization are outside the current scope.
     
-    \item The initial implementation uses approximately 20\% extra context around each region.
+    \item The initial implementation uses a default margin of 20\% of the region box width and height on each side.
     
-    \item The amount of extra context may be tested later if enough time and computing resources are available.
+    \item The initial margin ablation is complete in E4; broader tuning with trained experts remains for FYP-2.
 \end{itemize}
 
 These assumptions set the starting conditions for developing and testing the prototype.
@@ -803,7 +831,7 @@ Grounded SAM generates semantic region masks using the predefined prompts. \\ \h
 The operator waits while the detected regions are prepared.
 } &
 4 &
-The system extracts each selected region with approximately 20\% additional surrounding context. \\ \hline
+The system extracts each selected region with a configurable margin, defaulting to 20\% of its box dimensions on each side. \\ \hline
 
 5 &
 \multicolumn{2}{p{6.2cm}|}{
@@ -854,7 +882,7 @@ The system sends the whole image to the fallback expert and records that no doma
 A region cannot be associated with a supported expert.
 } &
 5A &
-The system sends the region to the fallback expert and records the routing limitation. \\ \hline
+The system records and discards the unassignable region. Its pixels receive fallback colorization unless another retained region owns them. \\ \hline
 
 6A &
 \multicolumn{2}{p{6.2cm}|}{
@@ -992,7 +1020,7 @@ Cloud based GPU resources may be used when the available local hardware is insuf
 
 \subsection{Software Requirements}
 
-The project will use Next.js for the frontend and FastAPI for the backend. The model training, image processing, routing, blending, and evaluation components will be implemented in Python. The required software components are:
+The implemented pipeline, image processing, routing, blending, and evaluation use Python. The current interface is a standalone HTML concept, and the proposed Next.js frontend and FastAPI backend are planned for FYP-2. The software requirements below cover both the current pipeline and that planned integration:
 
 \begin{itemize}
     \item Next.js for developing the web-based user interface of the system.
@@ -1027,9 +1055,9 @@ The project will use Next.js for the frontend and FastAPI for the backend. The m
 The Next.js frontend will allow the user to upload a grayscale image and view the semantic masks, assigned experts, individual expert outputs, and final colorized image. The FastAPI backend will receive the image, run the Python-based colorization pipeline, and return the generated results to the frontend. Model configurations, prompts, dataset splits, and experiment settings will also be stored to support the reproduction of important experiments.
 \section{Graphical User Interface}
 
-The proposed project is primarily a research prototype and does not require a complex graphical user interface. The system is operated through a basic web interface built with Next.js, which communicates with the Python pipeline through a FastAPI backend (Section~\ref{sec:architecture}). The pipeline can also be run from scripts and notebooks without the interface, which the evaluation experiments use.
+The project is primarily a research prototype. In FYP-1, scripts, notebooks, and the command-line interface run the Python pipeline. A standalone HTML concept demonstrates the proposed user interaction, but it is not connected to the models and simulates colorization. The Next.js frontend and FastAPI backend in the architecture (Section~\ref{sec:architecture}) remain to be integrated in FYP-2.
 
-The web interface provides the following functions:
+The planned integrated web interface will provide the following functions:
 
 \begin{itemize}
     \item Selection or upload of a grayscale photograph.
@@ -1047,20 +1075,21 @@ The web interface provides the following functions:
     \item Display or export of the calculated evaluation results.
 \end{itemize}
 
-Figure \ref{fig:prototype-interface} shows the proposed interface of the system.
+Figure~\ref{fig:prototype-interface} shows the HTML interface concept. It illustrates the proposed interaction rather than a completed model-connected application.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[
-        width=0.85\textwidth,
+        width=\textwidth,
         keepaspectratio
     ]{Figures/Figure-4.8.1.png}
     \caption{Proposed Interface of the Image Colorization System}
     \label{fig:prototype-interface}
 \end{figure}
 
-The interface displays the intermediate results because each stage of the system must be evaluated separately. The final colorized image alone is not enough to verify the segmentation and routing results.
+The integrated interface is intended to display intermediate results because the final image alone cannot verify segmentation and routing. The current pipeline can save these outputs for inspection through scripts and the CLI; displaying them in the web application remains part of FYP-2.
 
+\FloatBarrier
 \section{Database Design}
 
 The proposed system does not require a conventional relational or NoSQL database. It does not maintain user accounts, transactions, or continuously changing application records. Experimental information can be maintained using directories, configuration files, CSV files, JSON files, and model checkpoint files.
@@ -1108,7 +1137,7 @@ The identifier of the expert assigned to process a semantic region. \\ \hline
 
 Contextual Crop &
 Image or tensor &
-The selected semantic region together with approximately 20\% additional surrounding context. \\ \hline
+The selected region with a default margin of 20\% of its box dimensions on each side, clipped to the image. \\ \hline
 
 Expert Output &
 Image or tensor &
@@ -1144,13 +1173,13 @@ The proposed system contains several connected components. A failure in an earli
 
 Incorrect semantic segmentation may cause image regions to be missed or incorrectly identified. Since routing depends on the generated semantic masks, segmentation errors can affect all remaining stages of the pipeline.
 
-This risk will be monitored using segmentation mIoU and by visually inspecting representative segmentation results.
+E1 monitors this risk using segmentation mIoU, coverage, and representative visual examples; the same checks will accompany later changes.
 
 \subsection{Routing Risk}
 
 Some regions may contain visual characteristics associated with more than one domain. This can make expert selection difficult. Incorrect routing may cause a region to be processed by an unsuitable expert.
 
-Routing accuracy will therefore be evaluated independently using labeled test regions. Uncertain or unsupported regions should also be recorded instead of being assigned silently to an unsuitable expert.
+E2 therefore evaluates routing accuracy independently using labeled test regions. Uncertain or unsupported regions should also be recorded instead of being assigned silently to an unsuitable expert.
 
 \subsection{Dataset and Expert Training Risk}
 
@@ -1162,7 +1191,7 @@ Domain specific datasets will be prepared separately, and each expert will be ev
 
 Outputs generated by different experts may contain noticeable color differences near the region boundaries. These differences may produce visible seams when the independently colorized regions are combined.
 
-Contextual region expansion and soft mask blending will be used to reduce this problem. The effectiveness of blending will also be evaluated by comparing results produced with and without the blending component.
+Contextual region expansion and soft-mask blending address this risk. E4 compares smoothing and binary-mask variants with shared weights; the comparison will be repeated with distinct trained experts in FYP-2.
 
 \subsection{Computational Risk}
 
@@ -1180,7 +1209,7 @@ Required versions and dependencies will be recorded. Important pretrained weight
 
 Training, model tuning, and evaluation may require more time than initially expected. Failed experiments may further delay the comparison of the expert models and the complete framework.
 
-Development will be performed incrementally. Initial work will focus on a small but complete pipeline before increasing dataset sizes or introducing additional experiments.
+Development proceeds incrementally. FYP-1 established a small but complete pretrained pipeline and its initial evaluation. FYP-2 will build on that implementation with specialist training and broader experiments within the measured resource limits.
 
 \section{Conclusion}
 
@@ -1188,16 +1217,16 @@ This chapter defined the requirements of the proposed research oriented image co
 
 The quality requirements focus on correctness, modularity, reproducibility, evaluability, maintainability, and resource awareness. The assumptions define the datasets, pretrained components, and scope required for the initial implementation. The hardware and software requirements describe the environment needed to conduct the experiments, while the interface and data organization sections explain how the prototype will be operated and how its experimental outputs will be maintained.
 
-The identified risks demonstrate that the final performance of the system depends on several connected stages. For this reason, segmentation, routing, expert colorization, and blending will be evaluated separately as well as through the final generated image. These requirements provide the foundation for implementing and experimentally evaluating the proposed Mixture of Experts colorization framework.
+The identified risks demonstrate that the final performance of the system depends on several connected stages. For this reason, FYP-1 evaluates decomposition, routing, pretrained baselines, and pipeline blending separately. Domain-specialist evaluation remains for FYP-2. These requirements provide the basis for the implementation and experiments documented in Chapters~\ref{ch:implementation} and~\ref{ch:results}, and for the remaining FYP-2 work.
 
 \chapter{Proposed Approach and Methodology}
 \label{ch:method}
 
-This chapter presents the proposed approach as a framework for region-based Mixture-of-Experts (MoE) image colorization. Instead of predicting the colors of an entire photograph with a single network, the framework decomposes a grayscale image into semantic regions, assigns each region to a domain-specialized expert, and merges the expert outputs into one color image. The chapter first gives an overview of the complete pipeline (Section~\ref{sec:framework}) and then describes each stage in turn: region decomposition (Section~\ref{sec:decomposition}), expert routing (Section~\ref{sec:routing}), context-aware region extraction (Section~\ref{sec:extraction}), expert colorization models (Section~\ref{sec:experts}), blending (Section~\ref{sec:blending}), and the procedure for adding new experts (Section~\ref{sec:extensibility}). Section~\ref{sec:evaluation} closes the chapter with the evaluation protocol used to test each objective. The chapter covers the algorithmic and procedural details of the method; the system structure and component interfaces are covered in Chapter~\ref{ch:design}.
+This chapter presents the proposed approach as a framework for region-based Mixture-of-Experts (MoE) image colorization. Instead of predicting the colors of an entire photograph with a single network, the framework decomposes a grayscale image into semantic regions, assigns each region to a domain-specialized expert, and merges the expert outputs into one color image. The chapter first gives an overview of the complete pipeline (Section~\ref{sec:framework}) and then describes each stage in turn: region decomposition (Section~\ref{sec:decomposition}), expert routing (Section~\ref{sec:routing}), context-aware region extraction (Section~\ref{sec:extraction}), expert colorization models (Section~\ref{sec:experts}), blending (Section~\ref{sec:blending}), and the procedure for adding new experts (Section~\ref{sec:extensibility}). Section~\ref{sec:evaluation} closes the chapter with the evaluation protocol used to test each objective. The training and extensibility procedures describe planned FYP-2 work; the pipeline and E1--E4 protocol are implemented. The chapter covers the algorithmic and procedural details of the method; the system structure and component interfaces are covered in Chapter~\ref{ch:design}.
 
 \section{Overview of the Proposed Framework}
 \label{sec:framework}
-The framework takes a grayscale photograph as input and produces a color photograph as output. It treats colorization as a divide-and-conquer problem. A single network must approximate the colors of portraits, landscapes, urban scenes, and animals at the same time, and these domains have different color distributions. The proposed framework therefore assigns each part of the image to a model trained for that kind of content.
+The framework takes a grayscale photograph as input and produces a color image. It assigns semantic regions to domain slots so that each slot can later hold a model fine-tuned for its content. The current pipeline uses the same pretrained DDColor-T weights in every slot, allowing regional processing and blending to be evaluated before domain training. The benefit of learned specialization remains to be tested in FYP-2.
 \subsection{Pipeline Stages}
 
 The pipeline consists of five stages, shown in
@@ -1219,7 +1248,7 @@ Figure~\ref{fig:pipeline-overview}.
           the image boundaries, and resizes the crop to the expert's input
           size. The default margin adds $20\%$ of the box width on each
           horizontal side and $20\%$ of the box height on each vertical
-          side, subject to clipping. The E4 runner applies the same
+          side, subject to clipping. Without clipping, this makes the crop area $1.4^2=1.96$ times the original box area. The E4 runner applies the same
           cropping procedure to the fallback region
           (Section~\ref{sec:extraction}).
 
@@ -1239,7 +1268,7 @@ In E4, all four domain expert slots and the fallback used the same
 pretrained DDColor-T checkpoint. Holding the model weights fixed allowed
 the experiment to evaluate the effects of regional processing and blending.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=\textwidth]{Figures/pipeline-overview.pdf}
     \caption{Overview of the proposed region-based Mixture-of-Experts colorization pipeline.}
@@ -1283,7 +1312,7 @@ It then combines them in Lab and converts the result to RGB
 (Section~\ref{sec:blending}).
 \subsection{Relation to Existing MoE Approaches}
 
-Existing MoE work applies the idea at other levels. RS-MoEGAN~\cite{ref16} routes tokens inside a Vision Transformer, Gamma~\cite{ref15} uses shared and adaptive experts to handle dataset-level biases, and the product-key approach of He~\cite{ref14} scales to a very large number of small experts. In contrast, the proposed framework performs routing at the level of image regions, using a pretrained segmentation model as the router. As a result, no router needs to be trained, each expert only needs to learn a single domain, and a new expert can be added by defining a new prompt set (Section~\ref{sec:extensibility}).
+Existing MoE work applies the idea at other levels. RS-MoEGAN~\cite{ref16} routes tokens inside a Vision Transformer, Gamma~\cite{ref15} uses shared and adaptive experts to handle dataset-level biases, and the product-key approach of He~\cite{ref14} scales to a very large number of small experts. In contrast, the proposed framework performs routing at the level of image regions, using pretrained detection and segmentation followed by a fixed label-to-domain lookup. No router network is trained. The planned specialists each learn one domain, and adding an expert requires its checkpoint, prompts, and mapping entries (Section~\ref{sec:extensibility}).
 
 \section{Region Decomposition}
 \label{sec:decomposition}
@@ -1330,7 +1359,7 @@ For an input image the decomposition stage proceeds as follows.
     \item Output. The stage returns a list of regions. Each region holds a binary mask, a label (the prompt that produced it), a confidence score, and a bounding box. The routing stage uses the label (Section~\ref{sec:routing}) and the extraction stage uses the bounding box (Section~\ref{sec:extraction}).
 \end{enumerate}
 
-The stage has six parameters: the maximum image side, the box threshold, the text threshold, the minimum detection score, the suppression threshold, and the merge threshold. The maximum image side is fixed at 1024 pixels as a memory limit. The other five are selected on a tuning split of COCO-Stuff: a fixed random subset of 200 images from the official training split, not used for any reported result. The search is a single pass over the parameters, one at a time: each parameter is varied over a small grid while the others remain at their current best value, and the value with the highest mIoU is kept, with ties broken by the higher coverage. The grids are 0.25 to 0.45 in steps of 0.05 for the box threshold, 0.20, 0.25, and 0.30 for the text threshold, 0.30, 0.35, and 0.45 for the minimum score, 0.40, 0.50, and 0.60 for the suppression threshold, and 0.50, 0.60, and 0.70 for the merge threshold. The selected values are 0.25, 0.30, 0.30, 0.50, and 0.50, respectively. The resulting decomposition is compared against the ground-truth labels of the tuning split, and the parameters are then fixed before the segmentation test set (Section~\ref{sec:evaluation}) is used.
+The stage has six parameters: the maximum image side, the box threshold, the text threshold, the minimum detection score, the suppression threshold, and the merge threshold. The maximum image side is fixed at 1024 pixels as a memory limit. The other five are selected on a tuning split of COCO-Stuff: a fixed random subset of 200 images from the official training split, not used for the held-out E1/E2 test results. Its parameter-sweep results are reported separately as tuning evidence. The search is a single pass over the parameters, one at a time: each parameter is varied over a small grid while the others remain at their current best value, and the value with the highest mIoU is kept, with ties broken by the higher coverage. The grids are 0.25 to 0.45 in steps of 0.05 for the box threshold, 0.20, 0.25, and 0.30 for the text threshold, 0.30, 0.35, and 0.45 for the minimum score, 0.40, 0.50, and 0.60 for the suppression threshold, and 0.50, 0.60, and 0.70 for the merge threshold. The selected values are 0.25, 0.30, 0.30, 0.50, and 0.50, respectively. The resulting decomposition is compared against the ground-truth labels of the tuning split, and the parameters are then fixed before the segmentation test set (Section~\ref{sec:evaluation}) is used.
 
 \subsection{Limitations of the Decomposition Stage}
 
@@ -1339,7 +1368,7 @@ Three situations require handling after segmentation. Different prompts can prod
 \section{Expert Routing}
 \label{sec:routing}
 
-After decomposition, each region must be assigned to the expert that will colorize it. Routing in the proposed framework is a fixed lookup from the region label to a domain. No router network is trained, so the assignment is deterministic and the only learned components are the experts themselves. A consequence is that routing quality depends on the detector and on the mapping together, and this combined quality is what the routing accuracy metric in Section~\ref{sec:evaluation} measures.
+After decomposition, each retained region is assigned to the slot that will colorize it. Routing is a fixed lookup from the region label to a domain. No router network is trained; detection and segmentation use frozen pretrained models, and domain-expert fine-tuning remains for FYP-2. Routing quality therefore depends on the detector's labels and the mapping together, which is what the E2 routing accuracy measures (Section~\ref{sec:evaluation}).
 
 \subsection{Label-to-Domain Mapping}
 
@@ -1371,18 +1400,18 @@ Every prompt in the domain prompt set belongs to exactly one domain, so the labe
     \end{tabular}
 \end{table}
 
-A detection whose label does not match exactly one entry of the prompt set cannot be routed and is discarded. Its pixels are then treated as uncovered (Section~\ref{sec:fallback}).
+A detection whose label does not match exactly one entry of the prompt set cannot be routed and is recorded and discarded. Pixels not owned by another retained region are treated as uncovered (Section~\ref{sec:fallback}).
 
 \subsection{Handling Overlapping Regions}
 \label{sec:overlap}
 
-Regions with different labels can overlap, for example a person standing in front of a building, or a tree against the sky. Regions with the same label that overlap are already merged during decomposition (Section~\ref{sec:decomposition}). For the remaining overlaps, each contested pixel is assigned to a single region so that its color comes from one expert.
+Regions with different labels can overlap, for example a person standing in front of a building, or a tree against the sky. Same-label fragments are merged during decomposition only when their containment exceeds the merge threshold (Section~\ref{sec:decomposition}); other overlaps can remain. For the remaining overlaps, each contested pixel is assigned to a single region so that its color comes from one expert.
 
 The rule is that a pixel belongs to the smallest region that contains it. Writing $|M_k|$ for the area of mask $M_k$, the owner of pixel $x$ is
 \begin{equation}
     k^{*}(x) = \underset{k:\,M_k(x)=1}{\arg\min}\; |M_k|,
 \end{equation}
-with ties broken by the higher detection score. Smaller regions are usually objects in front of a larger background, so this rule gives the foreground object priority over the surface behind it. The rule uses only mask areas and not the labels, so it applies unchanged when new experts are added. After ownership is assigned, each mask is reduced to the pixels it owns, which makes the masks disjoint. Soft boundaries are then created from these disjoint masks in the blending stage (Section~\ref{sec:blending}).
+with ties broken by the higher detection score. Smaller regions are usually objects in front of a larger background, so this rule gives the foreground object priority over the surface behind it. The rule uses only mask areas and not the labels, so it applies unchanged when new experts are added. The ownership map defines a disjoint mask for each retained region. E1/E2 use these masks for evaluation. The E4 blender can instead receive overlapping SAM-derived masks from fresh decomposition, whereas its saved-decomposition path rebuilds the disjoint masks (Section~\ref{sec:b_blending}). Ownership and the masks supplied for blending must therefore be distinguished.
 
 \subsection{Handling Uncovered Pixels}
 \label{sec:fallback}
@@ -1484,12 +1513,11 @@ The framework uses DDColor-T with a ConvNeXt-T backbone and 55.0 million
 parameters~\cite{ref9,ref10}. The four proposed independently fine-tuned
 models would total approximately 220 million parameters. This is close to
 the 227.9 million parameters of the largest published variant, allowing
-a future comparison with one generalist of similar size
-(Section~\ref{sec:evaluation}). Each expert will start from the same
+a future comparison with one generalist of similar domain-model size (Section~\ref{sec:evaluation}). This count excludes the fallback, detector, and segmentation models and is not a matched total-memory or computation budget. Each expert will start from the same
 pretrained checkpoint and will be fine-tuned independently, allowing a
 checkpoint to be replaced on its own (Section~\ref{sec:extensibility}).
 A frozen backbone with domain-specific adapters was also considered for its
-lower storage cost. The chosen design gives each expert independent weights.
+lower storage cost. The target design allows each expert to have independent weights; the current E4 slots use shared pretrained weights.
 
 The experts operate at a fixed square input size $S$. E4 uses $S=256$.
 Section~\ref{sec:extraction} describes how crops are resized to this size.
@@ -1643,7 +1671,7 @@ The framework is designed so that a new domain can be added without redesigning 
 
 \subsection{Procedure for Adding an Expert}
 
-A new expert is added in four steps.
+The planned FYP-2 extension adds a trained expert in four steps; the full trained-expert demonstration is not part of FYP-1.
 
 \begin{enumerate}
     \item Define the domain and its prompts: A set of text prompts is chosen for the objects and surfaces that the new expert should handle. Each prompt must belong to exactly one domain, so a new prompt must not duplicate or closely overlap an existing one (Section~\ref{sec:routing}).
@@ -1656,9 +1684,9 @@ The first and last steps are changes to configuration and do not alter the decom
 
 \subsection{Independence of Existing Experts}
 
-The weights of each expert are stored in a separate checkpoint, and no parameters are shared between experts (Section~\ref{sec:experts}). Adding an expert therefore leaves the checkpoints of the existing experts untouched, and this can be verified directly by comparing checksums of the checkpoint files before and after the addition.
+The target design stores independently fine-tuned experts in separate checkpoints (Section~\ref{sec:experts}). FYP-1 instead registers the same pretrained checkpoint for every slot; it does not yet demonstrate trained specialist independence. Adding an expert therefore leaves the checkpoints of the existing experts untouched, and this can be verified directly by comparing checksums of the checkpoint files before and after the addition.
 
-Two indirect effects on the existing domains remain possible, and neither involves a change to an expert. First, all prompts are given to the detector as one text string (Section~\ref{sec:decomposition}), so adding prompts changes that string, which may change the detections obtained for the existing prompts. Second, regions of the new domain can overlap regions of existing domains, and the overlap rule (Section~\ref{sec:overlap}) can then assign some pixels to a different owner than before. Both effects are measured in the extensibility test (Section~\ref{sec:evaluation}), by comparing the regions and the final colorization of images from the existing domains before and after the new expert is added.
+Two indirect effects on the existing domains remain possible, and neither involves a change to an expert. First, all prompts are given to the detector as one text string (Section~\ref{sec:decomposition}), so adding prompts changes that string, which may change the detections obtained for the existing prompts. Second, regions of the new domain can overlap regions of existing domains, and the overlap rule (Section~\ref{sec:overlap}) can then assign some pixels to a different owner than before. The FYP-2 extensibility test will measure these effects and changes in blending contributions from the added expert (Section~\ref{sec:evaluation}), by comparing the regions and the final colorization of images from the existing domains before and after the new expert is added.
 
 % Preamble: set the fifth-expert domain once, for example \newcommand{\newdomain}{food}
 \newcommand{\newdomain}{[new domain]}
@@ -1666,11 +1694,11 @@ Two indirect effects on the existing domains remain possible, and neither involv
 \section{Evaluation Protocol}
 \label{sec:evaluation}
 
-This section describes how each objective of the project is tested. It defines the datasets and splits, the metrics, the baselines that the framework is compared with, the ablations that isolate the contribution of its components, and the test of extensibility.
+This section describes the completed E1--E4 evaluation and the additional specialist and extensibility evaluations planned for FYP-2. It defines the datasets and splits, the metrics, the baselines that the framework is compared with, the ablations that isolate the contribution of its components, and the test of extensibility.
 
 \subsection{Datasets and Splits}
 
-Four kinds of test data are used.
+The full evaluation protocol defines four kinds of test data. FYP-1 uses COCO-Stuff for E1/E2 and five fixed COCO sets for E3/E4; specialist domain and crop evaluations remain for FYP-2.
 
 \begin{itemize}
     \item Domain test sets: For each expert domain, the held-out test images of the domain datasets (Table~\ref{tab:datasets}). They are used to evaluate each expert on its own domain.
@@ -1679,7 +1707,7 @@ Four kinds of test data are used.
     \item Mixed-scene test set: Images that contain regions from at least two domains (for example a person in an urban scene), selected from the segmentation test set using its annotations.
 \end{itemize}
 
-The ground truth for colorization is the original color image, and the grayscale input is its $L$ channel. Test images are never used for training or for choosing parameters. The decomposition parameters are chosen on the segmentation tuning split. The smoothing width $\sigma_0$ and the boundary fraction $\rho$ are chosen on the validation images of the domain datasets. Where two datasets contain the same image, the duplicate is removed from the training data before the test images are fixed.
+The original color photograph supplies the reference for colorization metrics. The proposed FYP-2 training protocol derives grayscale inputs from its Lab $L$ channel. The current E4 runner instead uses Pillow grayscale intensities scaled to $[0,100]$ as working lightness (Section~\ref{sec:b_colorization}), so reference lightness must not be assumed identical. E1 fixes decomposition parameters using its separate tuning split. E4 reports descriptive ablations on its 100 validation images; it is not an independent held-out confirmation of a selected optimum. Future specialist evaluation will fix parameters on training/validation splits before final testing and remove any duplicated images across splits.
 
 \subsection{Region Decomposition Metrics}
 
@@ -1704,17 +1732,17 @@ Every pixel of a test image is given a predicted group, which is the group of th
 
 \subsection{Expert Colorization Metrics}
 \label{sec:expert-metrics}
-Each expert is evaluated on the test set of its own domain, with the following metrics.
+FYP-2 will evaluate each trained expert on its held-out domain set using the measures below. FYP-1 applies the image metrics to pretrained whole-image baselines in E3 and to the shared-checkpoint pipeline in E4; FID is reported only for E3.
 
 \begin{itemize}
     \item FID~\cite{heusel2017fid}: the distance between the feature distributions of the colorized images and the original color images. Lower is better. FID is unreliable on small sets, so the test sets must contain enough images for a stable estimate, and the number of images is reported with each value.
     \item LPIPS~\cite{zhang2018lpips}: a learned perceptual distance between each colorized image and its ground truth. Lower is better.
     \item Colorfulness~\cite{hasler2003colorfulness}: a measure of how saturated and varied the colors of an image are, computed without a reference. It is reported next to the other metrics to detect outputs that are desaturated, which is a typical failure of colorization models.
-    \item PSNR and SSIM: pixel-level and structural similarity to the ground truth. Because the luminance of the output equals that of the input, differences come from color only.
-    \item $\Delta E$: the mean Euclidean distance in the Lab color space between the output and the ground truth. As the luminance is identical, this is the error in the chrominance channels.
+    \item PSNR and SSIM: pixel-level and structural similarity to the reference. These compare reconstructed RGB images and can reflect lightness preprocessing, resizing, and clipping as well as chrominance prediction.
+    \item $\Delta E_{00}$: the mean per-pixel CIEDE2000 color difference after converting the reconstructed RGB output and reference to Lab. It includes any lightness differences and is not restricted to chrominance error.
 \end{itemize}
 
-A grayscale photograph has many plausible colorings, so similarity to the one original coloring (PSNR, SSIM, $\Delta E$) penalizes plausible alternatives. These metrics are therefore read together with FID, LPIPS, and colorfulness and not alone. Each expert is evaluated on the whole-image test set and on the region-crop test set, and the difference between the two shows how much the use of whole images in training affects the results on crops.
+A grayscale photograph has many plausible colorings, so similarity to the one original coloring (PSNR, SSIM, $\Delta E$) penalizes plausible alternatives. These metrics are therefore read together with FID, LPIPS, and colorfulness and not alone. The planned FYP-2 evaluation will compare trained experts on whole-image and region-crop sets to examine the effect of supplying crops to models trained on whole images. These specialist comparisons have not yet been completed.
 
 \subsection{Routing Accuracy}
 
@@ -1727,13 +1755,7 @@ combination of regional predictions. When smoothing is disabled, the
 blender uses binary masks restricted to their crops. If two binary masks
 overlap, their predictions are averaged at the overlapping pixels.
 
-The comparison uses the same 100 images for every condition. The E4
-results include boundary $\Delta E$, Lab $\Delta E$, LPIPS, PSNR, SSIM,
-and colorfulness. Boundary $\Delta E$ is reported as the boundary score
-recorded by the experiment. The available run records leave unverified
-whether the score subtracts the natural color change in the ground-truth
-image or uses the same boundary locations across all variants. FID was
-part of the proposed evaluation protocol and is unreported for E4.
+The comparison uses the same 100 images for every condition. E4 reports boundary $\Delta E_{00}$, Lab $\Delta E_{00}$, LPIPS, PSNR, SSIM, and colorfulness. Boundary $\Delta E_{00}$ is the mean CIEDE2000 output-to-reference error on reference-image edges detected with Sobel after Gaussian smoothing ($\sigma=2$), as described in Chapter~\ref{ch:results}. It is a reference-edge fidelity measure, not a direct measurement of discontinuities across segmentation seams. Visual inspection is needed alongside this score when discussing seams. FID belongs to the broader protocol but is not reported for E4.
 
 \subsection{Baselines and Ablations}
 
@@ -1796,19 +1818,19 @@ image with the image produced by the normal routing assignments.
 
 \subsection{Extensibility Test}
 
-The extensibility claim is tested by adding a fifth expert for the domain Vehicles, following the procedure of Section~\ref{sec:extensibility}. The test checks three things.
+The FYP-2 extensibility evaluation will add a trained fifth expert for Vehicles, following Section~\ref{sec:extensibility}. This evaluation is deferred; its planned checks are:
 
 \begin{itemize}
     \item Existing experts are unchanged: The checksums of the four existing checkpoints are compared before and after the addition.
     \item The new expert works: It is evaluated on the test set of its domain with the metrics of Section~\ref{sec:expert-metrics}, against the baselines above.
-    \item Existing domains are not degraded: For images from the four existing domains, the regions found by the decomposition stage and the final results are compared before and after the addition. The change in the regions is measured by the IoU between the masks before and after, and the change in the results by the difference in FID and LPIPS. Any difference can arise only from the changed prompt string and from the overlap rule (Section~\ref{sec:extensibility}), and the test reports its size.
+    \item Existing domains are not degraded: For images from the four existing domains, the regions found by the decomposition stage and the final results are compared before and after the addition. The change in the regions is measured by the IoU between the masks before and after, and the change in the results by the difference in FID and LPIPS. The comparison will examine changes in detections, ownership, and blending contributions after the new expert is added, and will report their effect without attributing them to updates of existing weights.
 \end{itemize}
 
-The files and configuration entries that had to be changed to add the expert are also recorded, to document how much of the system was left untouched.
+The files and configuration entries changed to add the expert will also be recorded, to document how much of the system was left untouched.
 
 \section{Conclusion}
 
-This chapter described a region-based Mixture-of-Experts framework for image colorization. A pretrained open-vocabulary segmentation model decomposes the grayscale input into regions, each region is routed to an expert by a lookup from its label, and the experts, which are fine-tuned copies of DDColor-T with independent weights, predict the chrominance of the crops they receive. The outputs are merged with soft masks and combined with the original luminance, so that the detail of the input is preserved. A new expert is added by defining new prompts and training one new network, without modifying the existing ones. The evaluation protocol tests each of these claims against baselines and ablations. The next chapter presents the architecture of the system and the design of its components.
+This chapter described the implemented regional pipeline and the remaining specialist-training protocol. Grounded-SAM decomposes the image, a label lookup selects expert slots, contextual crops receive chrominance predictions, and mask weights combine them with the supplied grayscale lightness. E1--E4 evaluate decomposition, routing, pretrained baselines, and reconstruction with shared weights. Independent domain fine-tuning and a trained fifth-expert demonstration remain for FYP-2. The next chapter presents the system architecture and component design.
 
 \chapter{High-Level and Low-Level Design}
 \label{ch:design}
@@ -1821,7 +1843,7 @@ This section gives an overview of the system. It describes the purpose and funct
 
 \subsection{Purpose and Functionality}
 
-The system converts a grayscale photograph into a color image. It is the working prototype of the region-based Mixture-of-Experts colorization framework proposed in this project. Instead of colorizing the whole image with one network, the system divides the image into semantic regions, colorizes each region with an expert trained for its domain, and merges the results into one image.
+The working prototype converts a grayscale photograph into a color image through semantic decomposition, routing, contextual crop prediction, and blending. The architecture assigns each region to a domain slot. These slots currently share pretrained DDColor-T weights; their replacement by independently trained specialists is planned for FYP-2. The design below also includes the intended web integration, whose implementation status is stated separately in Chapter~\ref{ch:implementation}.
 
 At run time, the system performs the following functions:
 
@@ -1830,11 +1852,11 @@ At run time, the system performs the following functions:
     \item Expert routing: assigns each region to a domain expert, resolves overlaps between regions, and provides a fallback for pixels that belong to no region.
     \item Region extraction: cuts each region out together with its surrounding context and prepares it as input for its expert.
     \item Expert colorization: predicts the chrominance of each region with the assigned expert.
-    \item Blending and reconstruction: merges the per-region predictions with soft masks and combines the result with the original luminance to form the output image.
-    \item User interaction: lets the user upload a grayscale photograph through a basic web interface and view the colorized result.
+    \item Blending and reconstruction: merges the per-region predictions with soft masks and combines the result with supplied grayscale lightness to form the output image.
+    \item User interaction (planned integration): will let the user upload a photograph through a Next.js frontend and FastAPI backend and view actual pipeline results. FYP-1 runs inference through scripts, notebooks, and the CLI.
 \end{itemize}
 
-Two further functions take place outside this path. The experts are trained offline on domain datasets, and the system as a whole is evaluated against baselines with the metrics of Section~\ref{sec:evaluation}. The system is also designed so that a new expert can be added as an extension (Section~\ref{sec:extensibility}).
+Two further functions take place outside this path. Domain-expert training is planned as offline FYP-2 work, while the implemented pipeline is evaluated against pretrained baselines with the metrics of Section~\ref{sec:evaluation}. The system is also designed so that a new expert can be added as an extension (Section~\ref{sec:extensibility}).
 
 The scope of the system is photographic colorization of still images. It does not provide manual control over the colors of individual objects, and extension to video and medical imagery is outside the present work.
 
@@ -1861,15 +1883,15 @@ The system is organized as a pipeline of stages, and each stage is implemented a
     \end{tabular}
 \end{table}
 
-Three decisions define the design. First, only the experts are learned. The segmentation models are used as released, routing is a lookup, and blending uses fixed filters, so training is limited to the four expert networks. Second, the experts share one architecture and have independent weights, which allows an expert to be added or replaced without affecting the others. Third, the user interface is kept separate from the pipeline. The interface passes an image to the pipeline and displays the result, and it contains no colorization logic. The reasons for these decisions are given in Section~\ref{sec:strategies}.
+Three decisions define the design. First, domain experts are the only models intended for project-specific fine-tuning; detection and segmentation remain pretrained and frozen. No fine-tuning was completed in FYP-1. Second, each slot can hold an independent checkpoint even though the current experiments use shared pretrained weights. Third, the planned web interface remains separate from the Python pipeline, so evaluation scripts and the CLI can run inference without a server.
 
 \subsection{Inputs, Outputs, and Users}
 
-The system is used through a basic web interface. The user uploads a grayscale photograph, which is a stored image file in a common format such as PNG, and the system returns the colorized image, which is displayed in the interface and can be saved. The user supplies no text prompts, because the prompts for each domain are built into the system. For evaluation, the grayscale input is obtained from the luminance channel of a color photograph, so that the original serves as the ground truth.
+The implemented pipeline accepts grayscale image files through scripts, notebooks, and the CLI and returns a colorized image. Prompts are predefined, so users need not supply them. The proposed integrated interface will expose upload, inference, and saving to end users in FYP-2. Evaluation uses original color photographs as references; the E4 grayscale/lightness preprocessing is described in Section~\ref{sec:b_colorization}.
 
 The output is a color image of the same size as the input.
 
-The interface is deliberately minimal. It provides image upload, a way to start the colorization, and display of the result. It offers no manual control over the colors or regions of the image. The intended users are people who want to colorize a photograph, and they need no knowledge of the underlying models.
+The planned integrated interface is deliberately minimal: image upload, a way to start colorization, and display of the actual model result. The present HTML concept only demonstrates this interaction. It offers no manual control over the colors or regions of the image. The intended users are people who want to colorize a photograph, and they need no knowledge of the underlying models.
 
 
 \section{Design Considerations}
@@ -1909,11 +1931,11 @@ This section describes the assumptions, constraints, goals, and development appr
 The following goals and guidelines shaped the design. When two of them conflict, they are applied in the order in which they are listed in the last paragraph of this subsection.
 
 \begin{itemize}
-    \item Preservation of the input: The luminance of the input is kept unchanged in the output, and only chrominance is predicted. The reason is that the structure and brightness of the photograph are already known, and predicting them would add error without adding information. It also makes the comparison of results with the ground truth depend on color alone.
+    \item Preservation of the input: Only chrominance is predicted, and reconstruction uses supplied grayscale lightness. E4 enlarges the working lightness if the input was downscaled, so unchanged original fine detail is a design goal rather than a guarantee of the present implementation. RGB comparison metrics can include lightness and resampling differences.
     \item Extensibility: A new expert can be added without retraining or modifying the existing ones (Section~\ref{sec:extensibility}). This is Objective~5 of the project, and it is the reason for the independent weights of the experts and for treating the label mapping and the list of experts as data.
     \item Modularity: Each stage has a defined input and output and does not depend on the internals of the others. The reason is that the stages can then be tested separately and replaced, for example a different segmentation model or a different expert architecture, without changing the rest.
     \item Reuse of pretrained components: Existing pretrained models are used instead of training equivalents from scratch. The reason is the compute budget, which does not allow the training of a detector, a segmentation model, and four colorization networks from scratch.
-    \item Low memory use over speed: Where memory and processing time conflict, memory is given priority, because the available GPU memory is the tightest resource. An example is loading experts when they are needed, which costs time on first use but keeps memory use independent of the number of experts.
+    \item Low memory use over speed: Where memory and processing time conflict, memory is given priority, because the available GPU memory is the tightest resource. An example is loading experts when they are needed, which costs time on first use and avoids loading unused experts. Peak memory still depends on how many models remain resident.
     \item Reproducibility: Library versions, model checkpoints, and random seeds are recorded, because notebook sessions are temporary and an experiment must be repeatable in a new session.
     \item Simplicity: Where a simple rule meets the need, it is preferred to a more complex one, for example a lookup for routing and a fixed rule for overlaps. The reason is that simple rules are easier to explain, test, and extend within the available time.
 \end{itemize}
@@ -1937,7 +1959,7 @@ This section describes how the functionality of the system is divided among comp
 
 Figure~\ref{fig:arch-overview} shows the top-level architecture. The system has a run-time part, which colorizes an uploaded image, and an offline part, which produces the trained experts and evaluates the system. The two parts are connected only through the expert checkpoints.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=\textwidth,height=0.6\textheight,keepaspectratio]{Figures/architecture-overview.pdf}
     \caption{Top-level architecture of the system.}
@@ -1947,15 +1969,15 @@ Figure~\ref{fig:arch-overview} shows the top-level architecture. The system has 
 The run-time part consists of the following components.
 
 \begin{itemize}
-    \item User Interface: receives the uploaded image and displays the result. It contains no colorization logic.
+    \item User Interface (planned Next.js/FastAPI integration): receives the uploaded image and displays the pipeline result. The current standalone HTML concept is separate and simulates its output.
     \item Pipeline Controller: the single entry point of the pipeline. It keeps the original image, calls the subsystems in order, passes the output of each to the next, and returns the final image to the interface. The subsystems do not call each other.
     \item Region Decomposition: finds the regions of the image that belong to the supported domains.
     \item Routing: assigns each region to a domain, makes the regions disjoint, and creates the fallback region for uncovered pixels.
     \item Region Extraction and Expert Colorization: prepares each region as expert input, runs the assigned expert, and places the prediction back into the image.
-    \item Blending and Reconstruction: merges the predictions of all regions and combines them with the original luminance.
+    \item Blending and Reconstruction: merges regional predictions and combines them with supplied grayscale lightness.
 \end{itemize}
 
-The offline part consists of the Training and Evaluation subsystem, which fine-tunes the experts and measures the results of the system.
+The offline part includes implemented evaluation tooling and the planned FYP-2 training subsystem. FYP-1 measures pretrained baselines and pipeline ablations; it does not fine-tune domain experts.
 
 The system depends on three pretrained models that it does not modify: Grounding DINO and the Segment Anything Model, used by Region Decomposition, and the DDColor-T checkpoint, which is the starting point of the experts and the fallback expert. The domain datasets are used only by the offline part. Besides these, the subsystems read the domain definitions (the prompt set and the label-to-domain mapping) and the numerical parameters of the method. The subsystems are connected through the data they exchange, which is summarized in Table~\ref{tab:interfaces}.
 
@@ -1970,10 +1992,12 @@ The system depends on three pretrained models that it does not modify: Grounding
         Region Decomposition & Grayscale image & Regions (mask, label, score, bounding box) \\
         Routing & Regions & Disjoint regions with assigned domains, and the fallback region \\
         Region Extraction and Expert Colorization & Routed regions, luminance & Chrominance map for each region \\
-        Blending and Reconstruction & Chrominance maps, masks, original luminance & Color image \\
+        Blending and Reconstruction & Chrominance maps, masks, supplied lightness & Color image \\
         \hline
     \end{tabular}
 \end{table}
+
+The interfaces above describe ownership-based routing. E1/E2 evaluate disjoint owner masks. The E4 blender can receive overlapping masks from fresh decomposition or disjoint masks from saved records, as detailed in Section~\ref{sec:b_blending}; the exact path used by the recorded E4 run remains unverified.
 
 \subsection{Subsystem Architecture}
 
@@ -2011,8 +2035,8 @@ This subsystem produces the chrominance of each region. Figure~\ref{fig:sub-expe
     \item Region Extractor: crops each region with its boundary context, resizes the crop to the expert input size, and places the expert output back at the crop position (Section~\ref{sec:extraction}).
     \item Expert Registry: records which expert belongs to which domain and where its checkpoint is stored.
     \item Expert Manager: loads the checkpoint of an expert when a region is routed to it for the first time, and releases experts that are no longer needed.
-    \item Experts: one DDColor-T instance for each domain, with independent weights.
-    \item Fallback Expert: the pretrained DDColor-T checkpoint as released, which colorizes the fallback region from the whole image.
+    \item Experts: one DDColor-T slot per domain, using the shared pretrained checkpoint in FYP-1 and intended to hold independent fine-tuned checkpoints in FYP-2.
+    \item Fallback Expert: pretrained DDColor-T applied to a context-expanded box around uncovered pixels. Its input covers the whole image when no routed region is found (Section~\ref{sec:fallback}).
 \end{itemize}
 
 \begin{figure}[htbp]
@@ -2024,9 +2048,9 @@ This subsystem produces the chrominance of each region. Figure~\ref{fig:sub-expe
 
 \subsubsection{Blending and Reconstruction}
 
-The subsystem forms the final image from the per-region predictions (Figure~\ref{fig:sub-blend}). The Soft Mask Builder smooths the region masks, the Chrominance Combiner computes the normalized weighted average of the predictions, and the Luminance Recombiner resizes the combined chrominance to the original size, joins it with the original luminance, and converts the result to RGB (Section~\ref{sec:blending}).
+The subsystem forms the final image from the per-region predictions (Figure~\ref{fig:sub-blend}). The Soft Mask Builder smooths the supplied masks, the Chrominance Combiner computes a normalized weighted average, and the Luminance Recombiner joins the result with supplied grayscale lightness before RGB conversion. When E4 downscales an input, both chrominance and working lightness are enlarged to the original dimensions (Section~\ref{sec:blending}).
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=\textwidth,height=0.55\textheight,keepaspectratio]{Figures/subsystem-blending.pdf}
     \caption{Components of the Blending and Reconstruction subsystem.}
@@ -2035,26 +2059,26 @@ The subsystem forms the final image from the per-region predictions (Figure~\ref
 
 \subsubsection{User Interface}
 
-The interface is a basic web page with an upload control, a control that starts the colorization, and a display of the result. It sends the image to the Pipeline Controller and shows the returned image. Because it only exchanges images with the controller, the pipeline can be run without it, which the evaluation scripts do.
+The planned interface is a basic web page with upload, inference, and result controls. Its FastAPI backend will pass images to the Pipeline Controller and return actual predictions. The current HTML concept has no backend connection and simulates colorization; the implemented evaluation scripts and CLI call the pipeline directly.
 
 \subsubsection{Training and Evaluation}
 
-This offline subsystem is carried out by the developers and takes no part in the processing of an uploaded image. The developers build the training, validation, and test splits of each domain and convert the images to the Lab color space. They then fine-tune a copy of the pretrained DDColor-T checkpoint for each domain (Section~\ref{sec:training}) and compute the metrics of Section~\ref{sec:evaluation} for the system, the baselines, and the ablations. The expert checkpoints that result from the fine-tuning are the only output of this subsystem that the run-time part reads.
+Evaluation is implemented as offline scripts and notebooks. The domain-training portion remains for FYP-2: developers will prepare domain splits, derive Lab training pairs, fine-tune separate DDColor-T checkpoints, and evaluate them against the baselines. These checkpoints will then replace the pretrained entries in the run-time expert registry. No domain-training script or trained specialist is included in FYP-1.
 
 \subsection{Interaction Scenarios}
 
-Figure~\ref{fig:seq-colorize} shows the interaction when a user colorizes an image. The user's messages go to the interface, which passes the image to the controller. The controller calls the subsystems in order, and the expert is called once for each region. If the uploaded file is not a valid image, the interface returns an error message and the pipeline is not started.
+Figure~\ref{fig:seq-colorize} shows the planned interaction after web integration; the current CLI and notebooks call the same pipeline without this interface. The user's messages go to the interface, which passes the image to the controller. The controller calls the subsystems in order, and the expert is called once for each region. If the uploaded file is not a valid image, the interface returns an error message and the pipeline is not started.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=\textwidth,height=0.75\textheight,keepaspectratio]{Figures/sequence-system.pdf}
     \caption{System sequence diagram of colorizing an image.}
     \label{fig:seq-colorize}
 \end{figure}
 
-Figure~\ref{fig:seq-addexpert} shows the steps of Section~\ref{sec:extensibility} from the point of view of a developer. The developer defines the prompts and the label mapping of the new domain, builds the dataset splits, and fine-tunes the expert from the pretrained checkpoint. The developer then registers the checkpoint in the Expert Registry and colorizes test images through the Pipeline Controller to run the extensibility test. The comparison of checksums and the evaluation of the results are carried out by the developer. The existing experts take no part in any of the steps.
+Figure~\ref{fig:seq-addexpert} shows the planned FYP-2 steps of Section~\ref{sec:extensibility} from the point of view of a developer. The developer defines the prompts and the label mapping of the new domain, builds the dataset splits, and fine-tunes the expert from the pretrained checkpoint. The developer then registers the checkpoint in the Expert Registry and colorizes test images through the Pipeline Controller to run the extensibility test. The comparison of checksums and the evaluation of the results are carried out by the developer. Existing expert weights are not updated during the new expert's training, but existing experts still run when comparing existing-domain outputs.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=\textwidth,height=0.75\textheight,keepaspectratio]{Figures/sequence-add-expert.pdf}
     \caption{Sequence diagram of adding a new expert.}
@@ -2078,11 +2102,11 @@ This section describes the main decisions that shaped the architecture, the reas
 
 \subsection{Staged Pipeline with a Central Controller}
 
-The system is a sequence of stages, and the Pipeline Controller is the only component that calls them (Section~\ref{sec:architecture}). Each stage receives its input from the controller and returns its output to it, and no stage calls another. The controller also keeps the data that later stages need but earlier stages do not produce, namely the original image, the original luminance, and the scale factor of the size limit. The alternative is a chain in which each stage calls the next. It would tie every stage to its successor, so replacing or testing one stage would require the others, and the original image would have to be passed through stages that do not use it. A message-based design with queues between the stages was not considered necessary for a prototype that processes one image at a time.
+The system is a sequence of stages, and the Pipeline Controller is the only component that calls them (Section~\ref{sec:architecture}). Each stage receives its input from the controller and returns its output to it, and no stage calls another. The controller keeps the original dimensions, supplied grayscale lightness, and size-limit scale factor needed for reconstruction. E4 reconstructs from working lightness rather than an untouched original-resolution Lab channel. The alternative is a chain in which each stage calls the next. It would tie every stage to its successor, so replacing or testing one stage would require the others, and the original image would have to be passed through stages that do not use it. A message-based design with queues between the stages was not considered necessary for a prototype that processes one image at a time.
 
 \subsection{Separation of the User Interface from the Pipeline}
 
-The user interface only sends an image to the controller and displays the image it returns. It contains no colorization logic. The reason is that the same pipeline must be run by the evaluation scripts without an interface, and that the interface can be changed without affecting the pipeline. The alternative of placing processing steps in the interface code would make the pipeline impossible to test without the interface.
+In the integrated design, the web interface sends an image to the controller and displays the returned prediction; model processing remains in Python. This separation allows scripts and the CLI to evaluate the pipeline without a server. The current HTML demonstration uses a client-side visual filter only as a placeholder and is not an alternative implementation of model inference.
 
 \subsection{Reuse of Pretrained Models}
 
@@ -2090,19 +2114,19 @@ Region decomposition and the starting point of every expert rely on pretrained m
 
 \subsection{Common Architecture with Independent Weights}
 
-All experts use the same network architecture, and each expert has its own weights, trained separately (Section~\ref{sec:experts}). Three alternatives were considered. A frozen shared backbone with small per-domain adapters would save storage, but the experts would then share parameters, and a change to the shared part would affect all of them. A single network conditioned on the domain would also share all parameters, and adding a domain would require retraining it. Different architectures for different experts would add code for each one and would mix the effect of the architecture with the effect of the training data in the evaluation. The chosen design keeps each expert replaceable on its own and keeps the comparison between experts and baselines clean.
+The target design uses a common network architecture with independently fine-tuned weights (Section~\ref{sec:experts}). FYP-1 uses the same pretrained checkpoint in all slots; independent domain training remains for FYP-2. Three alternatives were considered. A frozen shared backbone with small per-domain adapters would save storage, but the experts would then share parameters, and a change to the shared part would affect all of them. A single network conditioned on the domain would also share all parameters, and adding a domain would require retraining it. Different architectures for different experts would add code for each one and would mix the effect of the architecture with the effect of the training data in the evaluation. The chosen design keeps each expert replaceable on its own and keeps the comparison between experts and baselines clean.
 
 \subsection{Registry-Driven Extensibility}
 
 The domains known to the system are data and not code. The prompt set, the label-to-domain mapping, and the expert registry are read when the system starts, and the stages use them without reference to specific domains. Adding a domain therefore means adding entries and a checkpoint, and no stage changes (Section~\ref{sec:extensibility}). The alternatives are to write the domains into the code, for example as a chain of conditions, which requires code changes for each new domain, or to use a learned router, which would have to be retrained whenever a domain is added.
 
-\subsection{Chrominance-Only Prediction with Luminance Preservation}
+\subsection{Chrominance-Only Prediction and Lightness Reconstruction}
 
-The networks predict only the chrominance channels, and the output uses the luminance of the original image at full resolution (Section~\ref{sec:blending}). The alternative of predicting a full RGB image would make the network responsible for structure and brightness that the input already contains, and enlarging its output would blur that detail. With the chosen strategy, the fine detail of the photograph does not pass through the networks, which operate at a reduced size, and only the chrominance is enlarged.
+The networks predict chrominance rather than a complete RGB image. Reconstruction combines these predictions with supplied grayscale lightness, separating color prediction from the input structure. The current E4 runner resizes working lightness back to the original dimensions when necessary, so fine detail lost during downscaling is not recovered. Its Pillow grayscale conversion also differs from deriving the original color reference's Lab $L$ channel. Full-resolution lightness preservation therefore remains a reconstruction improvement to verify rather than an established property of every current output.
 
 \subsection{Memory Management}
 
-The segmentation models are used for every image and stay loaded. An expert is loaded when a region is first routed to it, and it is released when the image has been processed. The size of the processed image is limited (Section~\ref{sec:decomposition}) so that the memory needed for the activations of the models has an upper bound. The weights of the four experts occupy less than 1 GB in 32-bit precision, so memory is not limiting at the present number of experts. Loading on demand is chosen so that memory use does not grow with the number of experts, which matters because the system is meant to be extended. The alternative of keeping all experts loaded is simpler and faster at run time, but the memory it requires increases with every added expert. To limit the time lost to loading, the regions of an image are processed in order of their expert, so that each expert is loaded at most once per image.
+The segmentation models are used for every image. Experts are loaded on demand and may remain resident until the image has been processed. Grouping regions by expert avoids repeated loads within one image, while the working-image size limit bounds activation sizes. This avoids loading unused experts, but peak memory depends on the number of resident checkpoints and their activations; it is not independent of the number of experts used. The shared-checkpoint FYP-1 experiments do not establish the memory cost of a larger collection of distinct specialists.
 
 \subsection{Error Detection and Recovery}
 
@@ -2140,7 +2164,7 @@ This section describes the policies and tactics that guide the implementation. I
 
 \subsection{Tools and Libraries}
 
-The pipeline is written in Python. The networks run on PyTorch, and the pretrained models are used through the libraries released with them. The web interface is built with Next.js for the frontend and FastAPI for the backend that exposes the pipeline to it. Library and model versions are fixed, because the released code of the pretrained models depends on specific versions.
+The pipeline is written in Python and the networks run on PyTorch through pretrained-model wrappers. FYP-1 uses scripts, notebooks, a CLI, and a standalone HTML concept. Next.js and FastAPI are the planned frontend and backend for FYP-2. Recorded package and checkpoint versions support reproducibility; the exact E4 code hashes and mask-source provenance remain to be confirmed as noted in Chapter~\ref{ch:implementation}.
 
 \subsection{Coding Conventions}
 
@@ -2169,23 +2193,24 @@ Table~\ref{tab:traceability} relates each project objective to the components th
         Region decomposition & RegionDecomposer and its components & mIoU (Section~\ref{sec:evaluation}) \\
         Expert colorization quality & RegionExtractor, ExpertManager, experts & FID, LPIPS, PSNR, SSIM, $\Delta E$ \\
         Routing & Router, LabelMapper, OverlapResolver & Routing accuracy \\
-        Blending & Blender and its components & Boundary $\Delta E$, FID, LPIPS \\
-        Extensibility & ExpertRegistry, Domain & Extensibility test \\
+        Blending & Blender and its components & Boundary $\Delta E_{00}$, LPIPS (E4); FID planned \\
+        Extensibility & ExpertRegistry, Domain & Trained fifth-expert test (FYP-2) \\
         \hline
     \end{tabular}
 \end{table}
 
 \section{Conclusion}
 
-This chapter presented the design of the colorization system. The system is a pipeline of subsystems that are called in order by a controller: region decomposition, routing, expert colorization, and blending. A basic web interface sits on top of it. The design follows the goals of modularity, extensibility, and preservation of the input, and it works within the limits of a single GPU of moderate memory. The class diagram defines the classes that implement the subsystems, and the policies describe how they are built and tested. The next chapter describes the implementation and reports the results of the evaluation.
+This chapter presented the pipeline architecture, component interfaces, and strategies for modularity, extensibility, and resource-aware execution. The core pipeline and evaluation tooling are implemented. Independent expert training and the Next.js/FastAPI interface remain planned extensions, and the current reconstruction uses working grayscale lightness. The next chapter describes the implementation and test cases; Chapter~\ref{ch:results} reports the experiments.
 
 
 
 \chapter{Implementation and Test Cases}
+\label{ch:implementation}
 This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline, the evaluation tooling, and the test cases. It covers the five pipeline stages (decomposition, routing, extraction, colorization, blending), the configuration system, the web interface prototype, the E4 ablation runner, the extensibility mechanism, and the evaluation metrics with fixed test sets. The implementation follows the design of Chapter~\ref{ch:design} and produces the experimental results reported in Chapter~\ref{ch:results}.
 
 \section{Implementation}
-This section describes the implementation of the region-based Mixture-of-Experts colorization pipeline. The five stages are decomposition, routing, extraction, colorization, and blending, built as pure NumPy/PyTorch modules. Decomposition and routing logic uses only NumPy and is fully CPU-testable; model weights load lazily. A configuration system centralizes hyperparameters. A CLI and HTML prototype provide the web interface; full Next.js/FastAPI integration is deferred to FYP-2. The E4 ablation runner implements margin-based prediction sharing and CSV-based resumability. Extensibility is achieved through data-driven configuration, so adding a domain requires only data changes.
+This section describes the implemented five-stage pipeline: decomposition, routing, extraction, colorization, and blending/reconstruction. NumPy supports the deterministic processing logic, while PyTorch and pretrained-model libraries support neural inference. Synthetic inputs and model stand-ins allow CPU testing of the surrounding logic; actual decomposition and DDColor inference require the relevant model dependencies. A CLI runs the pipeline, and a separate HTML concept demonstrates the intended interface. Full Next.js/FastAPI integration, domain fine-tuning, and the trained fifth-expert evaluation remain for FYP-2.
 \subsection{Platform and Tools}
 The decomposition and routing stages are written in Python as part of a single package, \texttt{colorize}, which the three team members share through one GitHub repository. The code is split deliberately into two kinds of modules. Modules that call the pretrained models (loading the detector and the segmenter, running them on an image) are kept in one file. Everything else, namely detection filtering, fragment merging, routing, overlap resolution and the evaluation arithmetic, is plain NumPy. This makes that logic testable on any machine without a GPU, and it also means the models are loaded only when the first image is processed, not when the code is imported.
  
@@ -2486,7 +2511,7 @@ runner can load a saved decomposition or run decomposition on the image.
 \subsection{Web Interface Implementation}
 \label{subsec:web-interface}
 
-The design (Section~\ref{sec:sysoverview}) specifies a Next.js frontend with a FastAPI backend. In FYP-1, a minimal prototype was built as a concept demonstration but was not connected to the Python pipeline. Both are documented here for completeness and deferred to FYP-2 per the project scope (Section~\ref{sec:omitted-work}).
+The design (Section~\ref{sec:sysoverview}) specifies a Next.js frontend with a FastAPI backend. In FYP-1, a minimal prototype was built as a concept demonstration but was not connected to the Python pipeline. The completed HTML concept and the planned integration are documented separately; full integration remains for FYP-2 per the project scope (Section~\ref{sec:omitted-work}).
 
 \subsubsection{CLI Entry Point (\texttt{main.py})}
 A command-line interface in \texttt{main.py} provides an end-to-end runner for the pipeline. It accepts an input image, a checkpoint (either a single shared checkpoint for all domains or a directory with per-domain checkpoints), and colorization parameters (margin, smoothing width, blending toggle, region shape, input size). The CLI builds the expert registry, runs decomposition with Grounded-SAM, executes the colorization pipeline, and saves the output RGB image. Optional flags enable saving intermediate stages (decomposition masks, routed regions, expert outputs, blended result) and a domain overlay visualization. The CLI uses the \texttt{colorize} package directly and does not require a web server.
@@ -2524,10 +2549,10 @@ The \texttt{get\_e4\_conditions()} function programmatically builds 13 \texttt{C
 \end{itemize}
 
 \subsubsection{Margin-Based Prediction Sharing}
-For a given margin $\rho$, expert inference on crops is identical across blending, smoothing, and shape ablations. The runner executes the neural expert once per margin and shares the predicted $\widehat{ab}$ canvases across downstream blending variants, yielding a $\sim$5$\times$ speedup without changing mathematical results. The \texttt{run\_pipeline\_for\_image\_ablations} function groups conditions by margin, runs extraction and expert inference per margin group, then applies blending/reconstruction for each condition in the group.
+For a given margin $\rho$, expert inference on crops is identical across blending, smoothing, and shape ablations. The runner executes the neural expert once per margin and shares the predicted $\widehat{ab}$ canvases across downstream blending variants, avoiding repeated expert inference without changing the predicted canvases. No measured end-to-end speedup is reported. The \texttt{run\_pipeline\_for\_image\_ablations} function groups conditions by margin, runs extraction and expert inference per margin group, then applies blending/reconstruction for each condition in the group.
 
 \subsubsection{Resumability and CSV Schema}
-Results are appended image-by-image to a CSV with schema \texttt{(experiment, condition, image\_id, metric, value)}. The \texttt{\_get\_existing\_pairs} function reads the CSV and returns completed \texttt{(image\_id, condition)} pairs. A rerun with \texttt{--resume} (default) skips already-completed conditions, enabling interruption recovery.
+Results are appended image by image to a CSV with fields \texttt{experiment}, \texttt{condition}, \texttt{image\_id}, \texttt{metric}, and \texttt{value}. The \texttt{\_get\_existing\_pairs} function returns completed image/condition pairs. A rerun with \texttt{--resume} (default) skips those pairs, enabling interruption recovery.
 
 \subsubsection{CLI Commands}
 The runner exposes four subcommands:
@@ -2542,7 +2567,7 @@ ID loading priority: explicit \texttt{--id-list} > \texttt{e3\_ids.json} > built
 \subsection{Extensibility Implementation}
 \label{subsec:extensibility-impl}
 
-The design (Section~\ref{sec:extensibility}) requires adding a new expert without retraining existing ones. The implementation achieves this through data-driven configuration:
+The design (Section~\ref{sec:extensibility}) requires adding a new expert without retraining existing ones. The implementation provides prompt, mapping, and registry entries for the extension. The following procedure describes the planned trained-expert demonstration, which remains for FYP-2:
 
 \begin{enumerate}
     \item \textbf{Prompts}: Add the new domain's text prompts to \texttt{DecompConfig.prompts} (a dictionary in \texttt{colorize/config.py}). No code changes.
@@ -2550,9 +2575,9 @@ The design (Section~\ref{sec:extensibility}) requires adding a new expert withou
     \item \textbf{Expert training}: Fine-tune a new DDColor-T checkpoint on the new domain's dataset. This is independent of existing experts.
     \item \textbf{Expert Registry}: Add the new checkpoint path to the \texttt{ExpertRegistry} (a dictionary mapping domain $\to$ checkpoint). The CLI (\texttt{main.py}) and E4 runner (\texttt{experiments/e4.py}) read this registry at runtime.
     \item \textbf{Verification}: Compare checksums of the four existing checkpoints before and after the addition to confirm they are unchanged.
-    \item \textbf{Extensibility test}: Run the pipeline on existing-domain images before and after the addition. Measure IoU of region masks and FID/LPIPS of final outputs. Any difference arises only from the changed prompt string and overlap resolution (Section~\ref{sec:extensibility}).
+    \item \textbf{Extensibility test}: Run the pipeline on existing-domain images before and after the addition. Measure IoU of region masks and FID/LPIPS of final outputs. Check whether changed detections, ownership, and blending contributions affect existing-domain outputs while their expert weights remain fixed (Section~\ref{sec:extensibility}).
 \end{enumerate}
-The existing experts' weights, code, and evaluation are untouched. The mechanism was validated by the test suite (Section~\ref{sec:test-metrics}).
+The procedure is intended to leave existing checkpoints and stage algorithms unchanged, although prompts can affect detections and overlaps. Current tests cover routing configuration only; adding and evaluating a trained expert has not been validated by the suite (Section~\ref{sec:test-metrics}).
 
 \subsection{Evaluation Tooling}
 \label{subsec:evaluation-tooling}
@@ -2580,12 +2605,14 @@ Boundary $\Delta E_{00}$ & CIE $\Delta E$; lower is better & Detect edges on the
 Colorfulness & score; descriptive & Apply the Hasler--S\"usstrunk opponent-color statistic to the generated RGB image. This measures colorfulness, not fidelity to a reference.\\
 mIoU & [0,1]; higher is better & Average intersection-over-union across classes present in the prediction or ground truth.\\
 Pixel coverage & [0,1]; higher means more assigned pixels & Divide pixels owned by named regions by the total image pixels.\\
-Routing accuracy & [0,1]; higher is better & Divide correctly routed evaluated pixels by the number of evaluated pixels.\\
+Pixel-routing helper & [0,1]; higher is better & Divide correctly assigned evaluated pixels by evaluated pixels; this is separate from the region-count accuracy reported in E2.\\
 FID & non-negative; lower is better & Compare means and covariance matrices of two supplied feature sets using Fr\'echet distance.\\
 LPIPS & perceptual distance; lower is better & Optional learned feature distance; requires the optional LPIPS and PyTorch dependencies.\\
 \hline
 \end{tabular}
 \end{table}
+
+E2 routing accuracy is computed separately as the fraction of scored regions whose assigned domain matches the dominant ground-truth domain (Section~\ref{sec:e2-routing}); it is not the pixel-routing helper above.
 
 The image-comparison metrics validate RGB type and shape, and reject images
 whose dimensions do not match. Lab color difference and boundary color
@@ -2597,8 +2624,7 @@ dependencies are not needed by the basic metric and test-set utilities.
 The experiment uses COCO val2017 image identifiers stored as fixed lists to
 avoid changes caused by random sampling or dataset ordering. The sets contain
 20 images for each of the people, nature, urban, and animals domains, together
-with 20 mixed-domain scenes. Separate 20-image sets are defined for
-segmentation and region-crop evaluation. COCO paths are formed from the image
+with 20 mixed-domain scenes. The utilities also define small default sets for segmentation and region-crop checks. These are distinct from E1/E2's recorded 200-image tuning and 500-image test lists; trained-specialist crop evaluation remains for FYP-2. COCO paths are formed from the image
 identifier as a zero-padded twelve-digit JPEG filename beneath the selected
 split directory. Before evaluation, the annotation-backed validator checks
 that image identifiers exist, that each domain image has a category belonging
@@ -2619,7 +2645,7 @@ among images; they are not confidence intervals.
 \paragraph{Implementation details.}
 The evaluation tooling is organized into four modules covering metrics, fixed test sets, CSV result handling, and plotting. Key implementation points:
 \begin{itemize}
-    \item \textbf{Metrics}: Each metric is a pure NumPy/SciPy function taking two \texttt{uint8} RGB arrays. PSNR/SSIM/Lab $\Delta E$/Boundary $\Delta E$ use scikit-image. Colorfulness implements Hasler-Süsstrunk. FID uses SciPy's \texttt{sqrtm} on Inception-v3 features (optional). LPIPS wraps the \texttt{lpips} PyTorch package (optional). All metrics validate input shape and dtype.
+    \item \textbf{Metrics}: Image-comparison functions validate RGB shape and type and use NumPy and scikit-image where required. Colorfulness uses the Hasler--S\"usstrunk statistic on one output image. FID compares feature distributions using SciPy's \texttt{sqrtm}, while LPIPS uses PyTorch and its learned-feature package. These measures therefore have different inputs and dependencies; they are not all pure NumPy comparisons of two RGB arrays.
     \item \textbf{Fixed test sets}: Constant lists of COCO val2017 image IDs (20 per domain + 20 mixed) are defined. A path constructor builds the zero-padded 12-digit JPEG path. An annotation validator loads the COCO annotations JSON, checks that every ID exists, that domain images have at least one annotation in the expected category group, and that sets are disjoint. It writes a JSON manifest with per-image metadata.
     \item \textbf{CSV result handling}: A record schema (experiment, condition, image\_id, metric, value) is defined with append-only writes. Resumability is achieved by reading existing records and skipping completed \texttt{(image\_id, condition)} pairs. Aggregate summaries compute count, mean, std per \texttt{(experiment, condition, metric)}.
     \item \textbf{Plotting}: Helpers provide metric comparison plots, ablation curves, and example grids using Matplotlib with Agg backend (headless). Figures are saved as PNG at 160 DPI.
@@ -2674,6 +2700,7 @@ configured.
 \centering
 \caption{Test cases for evaluation metrics and fixed test sets.}
 \label{tab:person-c-test-cases}
+\setlength{\tabcolsep}{5pt}
 \begin{tabular}{p{0.09\linewidth}p{0.24\linewidth}p{0.36\linewidth}p{0.21\linewidth}}
 \hline
 ID & Component & Test input or action & Expected result\\
@@ -2683,7 +2710,7 @@ C-02 & SSIM & Compare identical images and then compare different constant image
 C-03 & Lab $\Delta E_{00}$ & Compare identical images and reverse the order of a different image pair. & Identical images have approximately zero error; the distance is symmetric.\\
 C-04 & Colorfulness & Compare a uniform gray image with a strongly colored red-and-blue image. & Gray has a low score; the colored image scores higher.\\
 C-05 & mIoU & Evaluate perfect, fully incorrect, and partially overlapping label maps. & Scores match the expected perfect, zero, and hand-computed partial overlap values.\\
-C-06 & Coverage and routing & Evaluate synthetic region masks with known pixel coverage and domain assignments. & Coverage and routing accuracy match the known pixel fractions; empty routing returns zero.\\
+C-06 & Coverage and pixel-routing helper & Evaluate synthetic region masks with known pixel coverage and domain assignments. & Coverage and the pixel-routing helper match known pixel fractions; empty routing returns zero. E2 region accuracy is a separate measure.\\
 C-07 & Fixed test sets & Check the sizes of domain, mixed-scene, segmentation, and region-crop lists, and check for duplicate IDs. & Each list contains 20 IDs and no IDs are duplicated across sets.\\
 C-08 & COCO paths and loader & Resolve an image ID under \texttt{val2017}; load a known set and request an unknown set. & The image path uses a zero-padded 12-digit filename; an unknown set raises a clear error.\\
 C-09 & Annotation validation & Validate a complete fixture, then fixtures with a missing image or a category mismatch. & The complete fixture is valid; missing or mismatched entries are reported.\\
@@ -2820,7 +2847,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\clearpage
 \subsubsection{Extraction, Colorization Wrapper, and Blending}
 
 
@@ -2844,7 +2870,7 @@ The following test cases are presented in the full QA template format as represe
 \textbf{Pre-Requisite:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{\texttt{ColorizationConfig} with margin=0.2, \texttt{input\_\allowbreak size}=64.} \\ \hline
 \textbf{Step No.} & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{\textbf{Execution description}} & \textbf{Procedure result} \\*\hline
 1 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Region at (30,20)-(70,60), w=40, h=40, $\rho=0.2$.} & Crop box: (22,12)-(78,68). Expansion of 8 px on each side. \\ \hline
-2 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Region at (0,0)-(20,20), $\rho=0.5$.} & Crop box clipped: (0,0)-(45,45). No negative coordinates. \\ \hline
+2 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Region at (0,0)-(20,20), $\rho=0.5$.} & Crop box clipped: (0,0)-(30,30). No negative coordinates. \\ \hline
 3 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Region at (120,70)-(150,100), $\rho=0.5$.} & Crop box clipped at right/bottom: (105,55)-(150,100). \\ \hline
 4 & \multicolumn{2}{>{\raggedright\arraybackslash}p{\tcSpanBC}|}{Extract input and map output round-trip.} & Resized crop is $64\times64$; mapped canvas is $100\times150\times2$; zeros outside the crop. \\*\hline
 \multicolumn{4}{|>{\raggedright\arraybackslash}p{\tcSpanAll}|}{\textbf{Comments:} Verifies that context-margin expansion clips at image boundaries and that the extract-map round-trip preserves the canvas shape with zeros outside the crop.} \\*\hline
@@ -2965,7 +2991,6 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\clearpage
 \subsubsection{Pipeline Ablations (E4)}
 
 
@@ -2982,7 +3007,7 @@ The following test cases are presented in the full QA template format as represe
 \textbf{Test case Version:} & 1.0 & \textbf{Reviewed By:} & Project team \\*\hline
 \textbf{Test Date:} & 10th November 2026 & \textbf{Use Case Reference(s):} & E4 ablation study \\*\hline
 \textbf{Revision History:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{None} \\ \hline
-\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify that the E4 pipeline runner generates all 13 ablation conditions, shares expert predictions across conditions with the same margin, and produces valid RGB output for each condition.} \\ \hline
+\textbf{Objective:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Verify seven representative E4 conditions, prediction sharing for conditions with the same margin, and valid RGB output. The experiment runner supports the full 13-condition study reported in Chapter~\ref{ch:results}.} \\ \hline
 \textbf{Product/\allowbreak Ver/\allowbreak Module:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{E4 pipeline runner (\texttt{experiments.e4}), stand-in expert manager.} \\ \hline
 \textbf{Environment:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Linux, Python 3.13, pytest. No GPU needed.} \\ \hline
 \textbf{Assumptions:} & \multicolumn{3}{>{\raggedright\arraybackslash}p{\tcSpanBCD}|}{Synthetic $80\times80$ luminance image; one person region plus fallback; 7 test conditions.} \\ \hline
@@ -3008,7 +3033,7 @@ much of the implementation the suite exercises, how much of it passes, and how
 the tests trace back to the requirements. Table~\ref{tab:test-metrics} gives
 the six test metrics.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
 \caption{Test metrics for the automated suite.}
 \label{tab:test-metrics}
@@ -3025,12 +3050,9 @@ of test cases developed for the system. \\ \hline
 completed successfully in the recorded environment. \\ \hline
 \textbf{Number of Test Cases Failed} & 0. No executed test case failed. \\
 \hline
-\textbf{Test Case Defect Density} & $(0 \text{ failed} \times 100) / 178
-\text{ executed} = 0\%$. No failure was recorded in the final revision. \\
+\textbf{Test Case Defect Density} & Not established from the recorded test pass. The observed failure rate is $0/178=0\%$; this is not a measurement of defect density. \\
 \hline
-\textbf{Test Case Effectiveness} & 100\%. Every defect that the recorded test
-pass exercised was detected by the suite: 178 of 178 cases passed and none
-remained undetected. \\ \hline
+\textbf{Test Case Effectiveness} & Not established from pass counts alone. The recorded pass rate is $178/178=100\%$; it does not prove that all defects were detected. \\ \hline
 \textbf{Traceability Matrix} & Table~\ref{tab:req-traceability} maps each
 functional requirement FR1--FR12 to its implementing module and to the test
 cases that verify it. \\ \hline
@@ -3039,8 +3061,7 @@ cases that verify it. \\ \hline
 
 \subsection{Test Suite Composition}
 \label{sec:test-suite-composition}
-Table~\ref{tab:test-modules} reports the second test metric: how the 178 test
-cases are distributed over the test modules.
+Table~\ref{tab:test-modules} shows how the 178 recorded test cases are distributed over the test modules.
 
 \paragraph{Test levels.} The suite combines three levels. Unit tests cover the
 decomposition stage, label routing, extraction, the colorization wrapper,
@@ -3084,18 +3105,16 @@ taken from the \path{tests/} directory of the implementation repository.
 \paragraph{Execution and status.} The suite runs with
 \texttt{python -m pytest} from the repository root in a Linux environment with
 Python 3.13 and pytest; it needs no GPU. All tests pass in the recorded
-environment. No coverage percentage or runtime is reported here, because both
-depend on the machine.
+environment. No coverage percentage was recorded. Runtime is also unreported and would depend on the execution environment.
 
 \subsection{Traceability Matrix}
 \label{sec:traceability-matrix}
-Table~\ref{tab:req-traceability} reports the third test metric. Traceability is the
+Table~\ref{tab:req-traceability} documents requirement traceability. Traceability is the
 ability to determine that each feature has a source in the requirements and
 that each requirement has a corresponding implemented feature. The twelve
 functional requirements of Table~\ref{tab:functional-requirements} are listed
 against the module that implements them and the test cases that verify them.
 
-\clearpage
 {\small
 \setlength{\tabcolsep}{3pt}
 \renewcommand{\arraystretch}{1.0}
@@ -3111,26 +3130,21 @@ against the module that implements them and the test cases that verify them.
 \textbf{Req.} & \textbf{Requirement} & \textbf{Implemented in} & \textbf{Test evidence} \\ \hline
 \endhead
 FR1 & Grayscale photograph as input & \path{main.py}, pipeline & \path{test_integration.py} \\ \hline
-FR2 & Semantic regions from prompts and Grounded SAM & \path{colorize/decomposition.py} & \path{test_decomposition.py} (14 tests), TC-A-01 to TC-A-03 \\ \hline
-FR3 & Extraction with about 20\% surrounding area & \path{colorize/extraction.py} & \path{test_colorization.py} (31 tests), TC-B-01 \\ \hline
+FR2 & Semantic regions from prompts and Grounded SAM & \path{colorize/decomposition.py} & \path{test_decomposition.py} (14 tests); real-model quality evaluated in E1 \\ \hline
+FR3 & Extraction with a 20\% per-side context margin & \path{colorize/extraction.py} & \path{test_colorization.py} (31 tests), TC-B-01 \\ \hline
 FR4 & Assignment of each region to a domain expert & \path{colorize/routing.py} & \path{test_routing.py} (14 tests) \\ \hline
 FR5 & Colorization of each region by its expert & \path{colorize/experts.py} & \path{test_colorization.py} (31 tests) \\ \hline
 FR6 & Several experts processing the same photograph & \path{colorize/pipeline.py} & \path{test_integration.py} (1 test) \\ \hline
 FR7 & Combination of expert outputs by soft mask blending & \path{colorize/blending.py} & \path{test_colorization.py}, \mbox{TC-B-02} \\ \hline
 FR8 & Reconstruction with regions kept in place & \path{colorize/pipeline.py} & \path{test_integration.py} \\ \hline
-FR9 & Display of regions, routing and expert output in the session & \path{gui/} & Manual only: HTML prototype, no automated test \\ \hline
+FR9 & Display of regions, routing and expert output in the session & \path{gui/} & Deferred web integration; HTML concept only. CLI can save intermediate outputs \\ \hline
 FR10 & Evaluation of segmentation, routing, colorization and final image & \path{colorize/metrics.py}, \path{colorize/seg_eval.py} & \path{test_metrics.py} (39 tests), \path{test_seg_eval.py} (32 tests) \\ \hline
 FR11 & Addition of a new expert and prompt set without retraining & \path{configs/class_groups.json} & Partial: configuration is validated by \path{test_routing.py}, no dedicated expert-registration test \\ \hline
-FR12 & Routing of unassignable regions to the fallback expert & \path{colorize/routing.py} & \path{test_routing.py}, \mbox{TC-A-02} \\ \hline
+FR12 & Discard unassignable regions; fallback for pixels without an owner & \path{colorize/routing.py} & \path{test_routing.py}, \mbox{TC-A-02} \\ \hline
 \end{longtable}
 }
 
-Ten of the twelve requirements are covered by automated tests. FR9 is exercised
-only through the HTML prototype, and FR11 is covered only in part, because the
-routing configuration is tested but adding a new expert is not. The remaining
-ten requirements map to 178 test cases, all of which pass, giving a defect
-density of 0\% and the 100\% effectiveness reported in
-Table~\ref{tab:test-metrics}.
+Ten of the twelve requirements have automated test evidence for their implemented logic. FR9's integrated web display is deferred; the HTML concept does not demonstrate actual masks or expert outputs, although scripts and the CLI can save them. FR11 is covered only in part because routing configuration is tested but adding a trained expert is not. The suite records 178 passing tests and zero failures. These counts describe execution status, not defect density, complete requirement satisfaction, or proof that no defects remain.
 
 \section{Conclusion}
 This chapter described the implementation of the region-based Mixture-of-Experts
@@ -3143,16 +3157,24 @@ than changes to the other experts. The evaluation tooling provides ten
 image-quality metrics, fixed COCO test sets with annotation validation, CSV
 result handling and plotting. The 178-test suite covers these components at
 unit, integration and data-validation level using synthetic data and model
-stand-ins, and all tests pass in the recorded environment. The web interface
-remains a CLI and HTML prototype; its full Next.js/FastAPI integration is
+stand-ins, and all tests pass in the recorded environment. The CLI runs inference, while the HTML concept is separate; full Next.js/FastAPI integration is
 deferred to FYP-2.
+% Keep the short Chapter 8 placeholder between the surrounding text.
+\par\FloatBarrier
+\Needspace{8\baselineskip}
+\let\chapterEightClearpage\clearpage
+\let\chapterEightCleardoublepage\cleardoublepage
+\let\clearpage\relax
+\let\cleardoublepage\relax
 \chapter{User Manual}
 \label{ch:user-manual}
 \textcolor{red}{This chapter will be added in FYP-II.} Design a complete user manual of your application and add that in this chapter.
 \textcolor{red}{NOTE: This Chapter is optional for Research projects but compulsory for Development projects.}
 
-\clearpage
+\par\Needspace{6\baselineskip}
 \chapter{Experimental Results and Discussion}
+\let\clearpage\chapterEightClearpage
+\let\cleardoublepage\chapterEightCleardoublepage
 \label{ch:results}
 This chapter presents the experimental evaluation of the colorization
 pipeline. It reports decomposition and routing performance, compares the
@@ -3189,9 +3211,7 @@ canonical identifier file is generated by \texttt{scripts/generate\_test\_ids.py
 with seed 0. The script scans the mounted val2017 files, builds the domain pools
 from the COCO annotations, samples exactly 20 images per set without overlap,
 and validates that every identifier exists on disk. The resulting lists are
-stored in \texttt{outputs/e3\_ids.json} and are shared by E3 and E4. The original
-colour image is used only as the reference; the pipeline receives its luminance
-channel, and the predicted chrominance is recombined with that luminance.
+stored in \texttt{outputs/e3\_ids.json} and are shared by E3 and E4. The original colour image supplies the reference for image metrics. Inference receives grayscale input; the E4 runner uses the working grayscale/lightness conversion described in Section~\ref{sec:b_colorization}. Reconstruction and preprocessing differences must therefore be considered alongside chrominance prediction.
 
 \paragraph{Models.}
 Region decomposition uses Grounded-SAM. Grounding DINO
@@ -3234,14 +3254,14 @@ margin, so the sharing changes runtime but not any measured value.
 \caption{Configuration of the four experiments.}
 \label{tab:experiment-setup}
 \small
-\begin{tabular}{p{0.8cm}p{3.4cm}p{4.0cm}p{5.6cm}}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.8cm}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{4.0cm}>{\raggedright\arraybackslash}p{5.6cm}}
 \hline
 Exp. & Images & Model or conditions & Main measures \\
 \hline
 E1 & 200 COCO-Stuff train (tuning) and 500 val (test) & Grounded-SAM; five fixed decomposition values & Group and domain mIoU, pooled coverage, fallback fraction \\
 E2 & Same 500 cached test images & Fixed label-to-domain routing & Routing accuracy, per-domain accuracy, confusion matrix \\
 E3 & 100 COCO val2017 images (5 sets of 20) & DDColor-T and DDColor-L on whole images & PSNR, SSIM, Lab $\Delta E_{00}$, boundary $\Delta E_{00}$, colorfulness, LPIPS, FID \\
-E4 & Same 100 images & 13 regional-pipeline conditions with identical DDColor-T experts & Same image metrics as E3 \\
+E4 & Same 100 images & 13 regional-pipeline conditions with identical DDColor-T experts & Same per-image metrics as E3; FID not reported \\
 \hline
 \end{tabular}
 \end{table}
@@ -3263,8 +3283,7 @@ CIEDE2000 colour difference in Lab, and boundary $\Delta E_{00}$ over Sobel
 edge pixels of the ground-truth image after Gaussian smoothing
 ($\sigma=2$). Colorfulness is the Hasler--S\"usstrunk score of the prediction
 and is descriptive rather than a fidelity measure. LPIPS is computed with the
-AlexNet backbone, and FID is computed from Inception-v3 features once per model
-and fixed set. Lower is better for Lab $\Delta E_{00}$, boundary
+AlexNet backbone. E3 additionally reports FID from Inception-v3 features once per model and fixed set; E4 does not report FID. Lower is better for Lab $\Delta E_{00}$, boundary
 $\Delta E_{00}$, LPIPS and FID; higher is better for PSNR and SSIM.
 
 \paragraph{Environment and outputs.}
@@ -3407,14 +3426,14 @@ building & 0.013 & 0.002 & 0.060 & 0.014 & 0.506 & 0.406 \\ \hline
 \subsection{Examples and Failure Cases}
 Figures~\ref{fig:a_e1_random} and~\ref{fig:a_e1_fail} show decompositions on six random test images and on the twelve images with the lowest pixel accuracy. The failure images all have a pixel accuracy of 0 among the 403 test images that contain at least one scored pixel. The remaining 97 images contain no pixel of the five groups and are therefore not included in per-image accuracy, although they do count towards coverage.
  
-\begin{figure}[p]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[height=0.86\textheight, width=\textwidth, keepaspectratio]{Figures/e1_examples_random.png}
 \caption{Decompositions of six randomly chosen test images: input, region overlay and ground-truth groups.}
 \label{fig:a_e1_random}
 \end{figure}
 
-\begin{figure}[p]
+\begin{figure}[!htbp]
 \centering
 \includegraphics[height=0.86\textheight, width=\textwidth, keepaspectratio]{Figures/e1_examples_failures.png}
 \caption{Decompositions of the twelve test images with the lowest pixel accuracy.}
@@ -3517,25 +3536,13 @@ Mixed scenes & DDColor-L & 62.084 & $0.120\pm0.039$\\
 \end{tabular}
 \end{table}
 
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=0.6\textwidth]{Figures/e3_colorfulness.png}
-    \caption{E3 colorfulness comparison for the DDColor-T and DDColor-L whole-image baselines. Error bars show variation across the evaluated images.}
-    \label{fig:e3-colorfulness}
-\end{figure}
-
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=0.6\textwidth]{Figures/e3_psnr.png}
-    \caption{E3 PSNR comparison for the DDColor-T and DDColor-L whole-image baselines. Error bars show variation across the evaluated images.}
-    \label{fig:e3-psnr}
-\end{figure}
-
 \begin{table}[htbp]
 \centering
 \caption{E3 image metrics on COCO val2017 (20 images per set; mean $\pm$ standard deviation).}
 \label{tab:e3-image-metrics}
 \small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
 \begin{tabular}{llccccc}
 \hline
 Set & Model & PSNR $\uparrow$ & SSIM $\uparrow$ & Lab $\Delta E_{00}\downarrow$ & Boundary $\Delta E_{00}\downarrow$ & Colorfulness\\
@@ -3554,17 +3561,23 @@ Mixed scenes & DDColor-L & $24.46\pm2.28$ & $0.921\pm0.040$ & $8.94\pm2.08$ & $1
 \end{tabular}
 \end{table}
 
-DDColor-L has lower LPIPS in all five sets and lower FID in four sets; urban
-FID is lower for DDColor-T. DDColor-L also has higher PSNR and lower mean Lab
-$\Delta E_{00}$ in all five sets. SSIM is higher for DDColor-L on people,
-nature, and animals, and higher for DDColor-T on urban and mixed scenes.
-Boundary $\Delta E_{00}$ is lower for DDColor-L in all five sets. These
-metrics therefore show trade-offs rather than a single uniformly superior
-condition. Colorfulness is descriptive and should not be interpreted as
-accuracy. The comparisons are descriptive; no paired significance test is
-reported. FID values based on 20 images per set are especially sensitive to
-sample size.
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Figures/e3_colorfulness.png}
+    \caption{E3 colorfulness comparison for the DDColor-T and DDColor-L whole-image baselines. Error bars show variation across the evaluated images.}
+    \label{fig:e3-colorfulness}
+\end{figure}
 
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Figures/e3_psnr.png}
+    \caption{E3 PSNR comparison for the DDColor-T and DDColor-L whole-image baselines. Error bars show variation across the evaluated images.}
+    \label{fig:e3-psnr}
+\end{figure}
+
+DDColor-L has lower LPIPS and higher PSNR in all five sets, and lower FID in four sets; urban FID is lower for DDColor-T. Lab and boundary $\Delta E_{00}$ favor DDColor-L in four sets, with DDColor-T better on urban images. SSIM favors DDColor-L on people and nature, and DDColor-T on urban, animals, and mixed scenes. The results therefore show trade-offs rather than a uniformly superior condition. Colorfulness is descriptive rather than an accuracy score. These comparisons are descriptive, with no paired significance test reported, and FID based on 20 images per set is especially sensitive to sample size.
+
+\FloatBarrier
 \section{E4: Pipeline Control and Component Ablation}
 \label{sec:e4-ablation}
 
@@ -3661,54 +3674,27 @@ e3\_ddcolor\_t\_whole (E3 baseline) & $11.43\pm2.73$ & $33.5\pm14.2$ & $0.150\pm
     \label{fig:e4-e3-comparison}
 \end{figure}
 
-\begin{figure}[p]
+\begin{figure}[!htbp]
     \centering
     \includegraphics[width=\textwidth,height=0.9\textheight,keepaspectratio]{Figures/e4_examples_grid.png}
     \caption{Qualitative comparison across E4 conditions and E3 baseline on sample images.}
     \label{fig:e4-grid}
 \end{figure}
 
-\subsection{Margin Ablation ($\rho \in \{0.0, 0.1, 0.2, 0.3\}$)}
-The context margin controls how much surrounding image content is included when
-cropping a region for the expert. At $\rho=0.0$ the crop is tight to the bounding
-box; at $\rho=0.2$ it expands by 20\% on each side. The results show a clear
-optimum at $\rho=0.2$: PSNR peaks at 22.83 dB and Boundary $\Delta E$ reaches
-its minimum of 11.32. Tighter crops ($\rho=0.0$) lose ambient lighting and
-ground-plane context, while larger margins ($\rho=0.3$) dilute the region with
-excess background. The effect is modest (PSNR range 0.06 dB) but consistent.
+\subsection{Margin Ablation (\texorpdfstring{$\rho \in \{0.0, 0.1, 0.2, 0.3\}$}{rho = 0.0, 0.1, 0.2, 0.3})}
+The context margin controls the surrounding content included in a crop. At $\rho=0.2$, the box expands by 20\% of its width and height on each side, subject to image boundaries. This setting has the highest reported PSNR among the tested margins (22.83 dB), while $\rho=0.1$ has slightly lower Lab and boundary errors. The differences are small and do not establish a universal optimum. Changing $\rho$ also changes the smoothing cap (Section~\ref{sec:blending}), so this ablation does not isolate context from smoothing.
 
 \subsection{Soft Blending vs. Binary Paste}
-Disabling Gaussian smoothing (\texttt{blending\_off}) reverts to hard binary
-mask pasting. The default soft blend achieves slightly lower Boundary $\Delta E$
-(11.32 vs. 11.42) and higher PSNR (22.83 vs. 22.76), confirming that soft
-transitions reduce seam artifacts. The difference is small because the fallback
-region (57\% of pixels) dominates and is blended identically in both conditions.
+Disabling Gaussian smoothing (\texttt{blending\_off}) uses crop-restricted binary masks; overlapping predictions are still averaged. The soft blend has slightly lower reference-edge error (11.32 vs.\ 11.42) and higher PSNR (22.83 vs.\ 22.76). These scores support a modest improvement in reference fidelity, but do not directly measure seam visibility. The smoothing choice also applies to fallback weights. E1's 57\% fallback share describes its 500-image set and should not be assumed to be the exact share in E4's 100-image set.
 
-\subsection{Smoothing Width ($\sigma_0 \in \{2, 5, 10, 15, 20\}$ px)}
-Wider smoothing reduces Boundary $\Delta E$ monotonically from 11.38 ($\sigma_0=2$)
-to 11.30 ($\sigma_0=20$), while PSNR improves from 22.78 to 22.85. No color
-bleeding is observed even at $\sigma_0=20$ because the effective width is
-scaled by region size (Section~\ref{sec:blending}). The default $\sigma_0=10$
-is near the plateau.
+\subsection{Smoothing Width (\texorpdfstring{$\sigma_0 \in \{2, 5, 10, 15, 20\}$}{sigma0 = 2, 5, 10, 15, 20} px)}
+Across the tested widths, boundary $\Delta E_{00}$ decreases from 11.38 at $\sigma_0=2$ to 11.30 at $\sigma_0=20$, while PSNR increases from 22.78 to 22.85. The effective width is capped using crop size and margin (Section~\ref{sec:blending}). These aggregate results favor wider smoothing within this grid; they do not establish that color bleeding is absent or that still larger widths would improve the result. The default $\sigma_0=10$ is close to the best reported values.
 
 \subsection{SAM Masks vs. Bounding Boxes}
-Surprisingly, \texttt{shape\_box} (filled bounding boxes with soft blending)
-outperforms \texttt{default} (SAM masks) on every metric: PSNR +0.09 dB,
-SSIM +0.004, Lab $\Delta E$ -0.09, Boundary $\Delta E$ -0.10, LPIPS -0.003.
-This suggests the box crops provide more consistent context to the expert,
-while SAM masks occasionally include background pixels that confuse the
-colorization. However, boxes cannot handle non-rectangular objects (e.g. a
-person with raised arms) as precisely as masks.
+The \texttt{shape\_box} condition improves the reported reference-based metrics relative to the default SAM-mask condition, while producing slightly lower colorfulness. Both conditions reuse the same expert predictions for the same crop margin (Section~\ref{subsec:e4-runner}); their difference is the masks used in reconstruction, including the fallback mask. The result therefore concerns blending support rather than improved input context for the expert. It does not establish that boxes provide more accurate object boundaries, particularly for non-rectangular objects.
 
 \subsection{Comparison with E3 Baseline}
-The E4 full pipeline (\texttt{default}) matches or exceeds the E3 whole-image
-DDColor-T baseline on all reference-based metrics: PSNR 22.83 vs. 22.56,
-SSIM 0.906 vs. 0.911, Lab $\Delta E$ 10.22 vs. 10.25, Boundary $\Delta E$
-11.32 vs. 11.43. E3 has slightly lower LPIPS (0.150 vs. 0.151) and higher
-colorfulness (33.5 vs. 32.1). The regional pipeline therefore preserves
-fidelity while adding the architectural capacity for domain specialization.
-These results use identical model weights; the benefit of independently
-fine-tuned experts is left for future work.
+The default E4 pipeline is competitive with the E3 whole-image DDColor-T baseline, with clear trade-offs. PSNR is higher (22.83 vs.\ 22.56), and Lab and boundary $\Delta E_{00}$ are slightly lower (10.22 vs.\ 10.25 and 11.32 vs.\ 11.43). SSIM is lower (0.906 vs.\ 0.911) and LPIPS is slightly higher (0.151 vs.\ 0.150), both favoring the whole-image baseline. Colorfulness is also lower (32.1 vs.\ 33.5), which is descriptive rather than a direct fidelity comparison. Shared model weights allow this experiment to assess regional processing and reconstruction; independently fine-tuned experts remain for FYP-2.
 
 E3 compares pretrained whole-image models; it does not establish expert
 specialization because all four pipeline slots use the same pretrained
@@ -3746,7 +3732,7 @@ $\Delta E_{00}$ is nearly equal (10.22 vs.\ 10.25), and SSIM is 0.005 lower
 (0.906 vs.\ 0.911). Among the tested margins, 0.2 gives the best PSNR and a
 boundary error within 0.01 of the best; soft blending lowers boundary error
 relative to binary paste; 20 px is the best of the tested smoothing widths;
-and bounding boxes improve every E4 metric relative to SAM masks. Because
+and bounding boxes improve the reference-based E4 metrics while reducing colorfulness. Because
 every slot loads the same checkpoint, these comparisons isolate the regional
 processing and blending from expert specialization.
 
@@ -3760,8 +3746,7 @@ routing is accurate overall (0.922) but uneven, with people and nature above
 0.92 and animals and urban scenes between 0.66 and 0.68.
 
 E3 established the whole-image reference points: DDColor-T gave PSNR 22.56 dB
-and SSIM 0.911 on the 100-image sets, while DDColor-L was stronger on PSNR,
-LPIPS and Lab $\Delta E_{00}$ in all five sets and on FID in four of five.
+and SSIM 0.911 across the 100 images. DDColor-L was stronger on PSNR and LPIPS in all five sets, and on Lab $\Delta E_{00}$ and FID in four of five; SSIM favored different models by set.
 
 E4 showed that the full pipeline with identical experts is competitive with
 whole-image DDColor-T. The default configuration is better on PSNR, Lab
@@ -3771,14 +3756,11 @@ tested margins, and soft blending, 20 px smoothing and bounding-box regions
 were the best tested choices for their respective components.
 
 The main limitations are the fallback-dominated coverage, the weaker routing
-for animals and urban content, and the small 20-image sets used for E3 and E4,
-which make the FID estimates preliminary. The results establish that the
-pipeline runs end to end and can match a whole-image baseline on reference
-metrics. They do not establish a benefit from separately trained domain
+for animals and urban content, and the small sets of 20 images per domain or mixed group in E3/E4. The E3 FID estimates are preliminary; E4 reports no FID. The results establish that the
+pipeline runs end to end and is competitive with a whole-image baseline, with metric-specific trade-offs. They do not establish a benefit from separately trained domain
 experts, because all slots shared one checkpoint. That question requires the
 FYP-2 training work.
 
-\clearpage
 \chapter{Future Work and Conclusion}
 \label{ch:conclusion}
 % ===== Chapter 10, Person A sections: 10.5 and 10.6 =====
@@ -3795,26 +3777,12 @@ completed.
 
 \section{Findings}
 \label{sec:findings}
-E1 achieved 0.624 group mIoU and 0.427 pooled pixel coverage on 500 validation
-images. E2 achieved 0.922 accuracy over scored regions and 0.817 macro-average
-accuracy across domains. In E3, DDColor-L had lower LPIPS in all five sets,
-lower FID in four sets, higher PSNR in all five sets, and lower Lab
-$\Delta E_{00}$ in all five sets; SSIM varied by set. E3 FID estimates use
-only 20 images per set. E4 evaluated the full regional pipeline with identical
-experts on 100 images across 13 ablation conditions. The default pipeline
-(margin 0.2, smoothing 10 px, SAM masks, soft blending) matches or exceeds
-the E3 whole-image DDColor-T baseline on all reference-based metrics (PSNR
-22.83 vs. 22.56, Boundary $\Delta E$ 11.32 vs. 11.43). The context margin
-$\rho=0.2$ is optimal; soft blending reduces Boundary $\Delta E$ vs. binary
-paste; smoothing width $\sigma_0=20$ px gives best PSNR (22.85) and lowest
-Boundary $\Delta E$ (11.30); bounding boxes surprisingly outperform SAM masks
-on all metrics. These results use identical model weights; the benefit of
-independently fine-tuned experts is left for future work.
+E1 achieved 0.624 group mIoU and 0.427 pooled pixel coverage on 500 validation images. E2 achieved 0.922 region accuracy and 0.817 macro-average accuracy across domains. In E3, DDColor-L had higher PSNR and lower LPIPS in all five sets, and lower Lab $\Delta E_{00}$ and FID in four sets. E3 FID uses only 20 images per set and is preliminary. E4 evaluated 13 conditions on 100 images using identical pretrained experts. Its default improves PSNR and the two color-error measures relative to whole-image DDColor-T, but has slightly worse SSIM and LPIPS. Margin 0.2 gives the highest PSNR among the tested margins; other measures favor 0.1. Soft blending and wider smoothing improve reference-edge fidelity within the tested settings. Box masks improve reference-based scores but reduce colorfulness. These results describe regional processing with shared weights, not a demonstrated benefit from domain-specialist training.
 
 \Needspace{10\baselineskip}
 \section{Scope and Objectives}
 \label{sec:objectives-status}
-\begin{longtable}{p{0.18\linewidth}p{0.18\linewidth}p{0.54\linewidth}}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedright\arraybackslash}p{0.18\linewidth}>{\raggedright\arraybackslash}p{0.54\linewidth}}
 \caption{Status of the five project objectives.}
 \label{tab:objective-status}\\
 \hline
@@ -3829,7 +3797,7 @@ Objective & Status & Evidence and scope\\
 Segment/\allowbreak decompose & Partly met & Region decomposition is implemented and evaluated; coverage is 0.427 and group mIoU is 0.624.\\
 Train domain experts & Deferred & The four expert slots use one pretrained DDColor-T checkpoint; separate training was not completed.\\
 Route regions & Partly met & Fixed routing is implemented; E2 accuracy was 0.922 overall and 0.817 macro-average across domains.\\
-Blend predictions & Met & Blending and reconstruction are implemented and evaluated in E4; soft blending reduces Boundary $\Delta E$ to 11.32 vs. 11.43 for binary paste, and the full pipeline matches whole-image DDColor-T on reference metrics.\\
+Blend predictions & Met & Blending and reconstruction are implemented and evaluated in E4; soft blending gives boundary $\Delta E_{00}$ of 11.32 vs.\ 11.42 for binary masks. The full pipeline shows trade-offs against whole-image DDColor-T.\\
 Extend with another expert & Deferred & A trained fifth expert and a corresponding extensibility evaluation are not included in the supplied results.\\
 \hline
 \end{longtable}
@@ -3852,15 +3820,15 @@ Several parts of the original plan are not part of this deliverable. They are li
 
 \paragraph{Fine-tuning the four domain experts.} The experts are the central idea of the framework, but training them requires many hours of GPU time on four datasets. The university-assigned GPU machine became available only shortly before the deadline, and the free Kaggle and Colab sessions are limited in length and quota, which is not enough to train four networks and still leave time for evaluation. In this deliverable, all four expert slots therefore use the same pretrained model. As a consequence, the results describe the pipeline (decomposition, routing, context margin and blending), and they say nothing yet about whether specialization helps.
 
-\paragraph{Pooled baseline and shuffled routing.} The baseline fine-tuned on pooled data and the shuffled-routing ablation both need trained experts. With identical experts, shuffled routing could not change the output, so the test would be meaningless.
+\paragraph{Pooled baseline and shuffled routing.} The pooled baseline requires a separate fine-tuning run on combined domain data, which was not completed in FYP-1. Shuffled routing becomes informative once expert slots contain distinct trained checkpoints. With identical weights and unchanged crops, changing only the assigned domain cannot change the predictions.
 
 \paragraph{Fifth expert and the extensibility test.} Showing that a new expert can be added without retraining the others requires one trained expert beyond the four, which depends on the same missing training.
 
-\paragraph{Web interface.} The interface is not needed to answer the research questions and was left out to give the available time to the experiments.
+\paragraph{Web interface integration.} A standalone HTML concept was completed, but it only simulates colorization. The Next.js/FastAPI connection to actual pipeline inference was deferred so that FYP-1 could prioritize the experiments.
 
 \paragraph{Wider evaluation of decomposition.} The decomposition and routing experiments use a fixed random subset of 500 validation images, a small search grid for the stage parameters, and one pass through the parameters. These choices were made to keep each run inside the free GPU limits.
 
-\paragraph{E4 pipeline ablation evaluation.} \textit{Completed in this deliverable.} The full pipeline with identical experts was evaluated across 13 ablation conditions on 100 images, including margin, blending, smoothing width, region shape, and comparison with the E3 whole-image baseline.
+
 
 \section{Plan for FYP-2}
 \label{sec:future-work}
@@ -3875,7 +3843,7 @@ the following remaining activities.
 \caption{Phased plan for FYP-2.}
 \label{tab:fyp2-plan}
 \small
-\begin{tabular}{p{0.9cm}p{4.4cm}p{8.6cm}}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.9cm}>{\raggedright\arraybackslash}p{4.4cm}>{\raggedright\arraybackslash}p{8.6cm}}
 \hline
 \textbf{Phase} & \textbf{Work} & \textbf{Deliverable} \\
 \hline
@@ -3900,7 +3868,7 @@ whole images, region crops, and mixed scenes. Compare the specialized
 pipeline with pretrained DDColor-T and DDColor-L, and with a DDColor-T
 baseline fine-tuned on pooled data from all four domains. Perform the deferred
 shuffled-routing ablation and repeat the blending comparisons with distinct
-experts, using the colorization and boundary metrics defined in the report.
+experts, using the colorization and boundary metrics defined in the report. Standardize grayscale/lightness preprocessing across the comparisons, verify reconstruction for larger inputs, and record code versions and mask provenance so that the trained-expert results are reproducible.
 
 \paragraph{Demonstrate extensibility with a trained fifth expert.} Train
 and register the planned Vehicles expert and its prompts. Check that the
@@ -3919,7 +3887,7 @@ first two stages, which will be investigated alongside the work above.
 
 \paragraph{Improve coverage.} Most of the decomposition errors are pixels that no region covers (84\% of all errors in E1), and vegetation and building are affected the most. The first step is a wider parameter search, since the minimum score and the text threshold were still improving at the edge of their grids and a joint search could find combinations that the one-at-a-time sweep cannot. Beyond that, the prompt set could be extended with additional words for vegetation and building-like surfaces, and each change should be tested with the same experiment, so that it is kept only if the mIoU rises.
 
-\paragraph{Reduce misrouting.} Animals and urban scenes are often sent to the people expert in E2. The breakdown of these errors by prompt label should show whether a prompt such as \textit{face} is responsible. If so, the prompt could be replaced or restricted, or a region could be checked against the other prompts that fired on the same area before it is routed. This must be verified before it is adopted.
+\paragraph{Reduce misrouting.} E2 already identifies the prompts associated with errors: \textit{face} accounts for most animal-to-people errors, while \textit{person} produces most urban-to-people errors. FYP-2 will investigate restricting or replacing problematic prompts and checking competing detections. Each proposed change must be evaluated before adoption, since the existing breakdown identifies associations rather than proving the cause of each detection.
 
 \paragraph{Handle the uncovered area better.} Because more than half of all pixels end up with the fallback expert, a good fallback matters as much as good experts. Options are to study how much the fallback output differs from the domain experts at region boundaries, and to test prompts for common background classes outside the four domains, such as walls and water.
 
@@ -3930,17 +3898,7 @@ first two stages, which will be investigated alongside the work above.
 
 \section{Final Conclusion}
 \label{sec:final-conclusion}
-This work implements a region-based, domain-routed colorization pipeline and
-measures decomposition, routing, pretrained whole-image baselines, and pipeline
-ablations. The results identify incomplete coverage as a main limitation and
-show that routing accuracy varies by domain. E3 provides DDColor-T/L scores,
-including LPIPS and FID. E4 evaluates the full regional pipeline with
-identical experts across 13 ablation conditions, showing that the default
-pipeline (margin 0.2, smoothing 10 px, SAM masks, soft blending) matches or
-exceeds the whole-image DDColor-T baseline on reference-based metrics. The
-shared expert checkpoint means the evaluation cannot determine whether trained
-domain specialists would improve the result. That question requires separately
-trained experts and a broader, reproducible evaluation.
+This work implements a region-based, domain-routed colorization pipeline and evaluates decomposition, routing, pretrained whole-image baselines, and component ablations. It identifies incomplete coverage and uneven routing as limitations. E4 demonstrates end-to-end operation with shared pretrained experts and trade-offs against whole-image DDColor-T: improved PSNR and color-error measures, but slightly worse SSIM and LPIPS. The experiments do not yet establish a benefit from learned domain specialization. FYP-2 will address that question through independent expert fine-tuning, the pooled-data comparison, a trained fifth-expert demonstration, and broader reproducible evaluation, together with the planned web integration.
 
 \begin{comment}
 
