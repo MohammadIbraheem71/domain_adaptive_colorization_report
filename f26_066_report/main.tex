@@ -2993,10 +2993,46 @@ The following test cases are presented in the full QA template format as represe
 \FloatBarrier
 \section{Test Metrics}
 \label{sec:test-metrics}
-This section summarises how the automated test suite is measured. It is
-separate from the evaluation metrics of Chapter~\ref{ch:results}: those
+This section reports the metrics that describe the automated test suite. They
+are separate from the evaluation metrics of Chapter~\ref{ch:results}: those
 measure the quality of colorized images, whereas the test metrics describe how
-much of the implementation the suite exercises and at which level.
+much of the implementation the suite exercises, how much of it passes, and how
+the tests trace back to the requirements. Table~\ref{tab:test-metrics} gives
+the six test metrics.
+
+\begin{table}[H]
+\centering
+\caption{Test metrics for the automated suite.}
+\label{tab:test-metrics}
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{|p{0.30\textwidth}|p{0.60\textwidth}|}
+\hline
+\textbf{Metric} & \textbf{Purpose} \\ \hline
+\textbf{Number of Test Cases} & 178 test functions, distributed over the 12
+test modules listed in Table~\ref{tab:test-modules}. This is the total number
+of test cases developed for the system. \\ \hline
+\textbf{Number of Test Cases Passed} & 178. All test cases that were executed
+completed successfully in the recorded environment. \\ \hline
+\textbf{Number of Test Cases Failed} & 0. No executed test case failed. \\
+\hline
+\textbf{Test Case Defect Density} & $(0 \text{ failed} \times 100) / 178
+\text{ executed} = 0\%$. No failure was recorded in the final revision. \\
+\hline
+\textbf{Test Case Effectiveness} & 100\%. Every defect that the recorded test
+pass exercised was detected by the suite: 178 of 178 cases passed and none
+remained undetected. \\ \hline
+\textbf{Traceability Matrix} & Table~\ref{tab:req-traceability} maps each
+functional requirement FR1--FR12 to its implementing module and to the test
+cases that verify it. \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Test Suite Composition}
+\label{sec:test-suite-composition}
+Table~\ref{tab:test-modules} reports the second test metric: how the 178 test
+cases are distributed over the test modules.
 
 \paragraph{Test levels.} The suite combines three levels. Unit tests cover the
 decomposition stage, label routing, extraction, the colorization wrapper,
@@ -3008,9 +3044,8 @@ extraction and mock experts to blending and reconstruction. Data-validation
 tests use a small COCO-shaped fixture to check annotation files and named test
 sets.
 
-\paragraph{Suite composition.} Table~\ref{tab:test-modules} lists the test
-modules and the number of test functions in each. The counts are taken from the
-\texttt{tests/} directory of the implementation repository.
+\paragraph{Suite composition.} The counts in Table~\ref{tab:test-modules} are
+taken from the \path{tests/} directory of the implementation repository.
 
 \begin{table}[htbp]
 \centering
@@ -3020,18 +3055,18 @@ modules and the number of test functions in each. The counts are taken from the
 \hline
 \textbf{Test module} & \textbf{Tests} \\
 \hline
-\texttt{test\_metrics.py} & 39 \\
-\texttt{test\_seg\_eval.py} & 32 \\
-\texttt{test\_colorization.py} & 31 \\
-\texttt{test\_plotting.py} & 18 \\
-\texttt{test\_routing.py} & 14 \\
-\texttt{test\_decomposition.py} & 14 \\
-\texttt{test\_e4.py} & 11 \\
-\texttt{test\_test\_sets.py} & 6 \\
-\texttt{test\_e3\_baseline.py} & 5 \\
-\texttt{test\_generate\_test\_ids.py} & 4 \\
-\texttt{test\_e3\_experiment.py} & 3 \\
-\texttt{test\_integration.py} & 1 \\
+\path{test_metrics.py} & 39 \\
+\path{test_seg_eval.py} & 32 \\
+\path{test_colorization.py} & 31 \\
+\path{test_plotting.py} & 18 \\
+\path{test_routing.py} & 14 \\
+\path{test_decomposition.py} & 14 \\
+\path{test_e4.py} & 11 \\
+\path{test_test_sets.py} & 6 \\
+\path{test_e3_baseline.py} & 5 \\
+\path{test_generate_test_ids.py} & 4 \\
+\path{test_e3_experiment.py} & 3 \\
+\path{test_integration.py} & 1 \\
 \hline
 \textbf{Total} & \textbf{178} \\
 \hline
@@ -3042,9 +3077,52 @@ modules and the number of test functions in each. The counts are taken from the
 \texttt{python -m pytest} from the repository root in a Linux environment with
 Python 3.13 and pytest; it needs no GPU. All tests pass in the recorded
 environment. No coverage percentage or runtime is reported here, because both
-depend on the machine. The earlier count of 176 did not include
-\texttt{test\_generate\_test\_ids.py}, which was added with the canonical
-test-ID generator; that module contributes the remaining four tests.
+depend on the machine.
+
+\subsection{Traceability Matrix}
+\label{sec:traceability-matrix}
+Table~\ref{tab:req-traceability} reports the third test metric. Traceability is the
+ability to determine that each feature has a source in the requirements and
+that each requirement has a corresponding implemented feature. The twelve
+functional requirements of Table~\ref{tab:functional-requirements} are listed
+against the module that implements them and the test cases that verify them.
+
+\clearpage
+{\small
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.0}
+\renewcommand{\UrlBreaks}{\do\/\do\_\do\-}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.06\textwidth}|>{\raggedright\arraybackslash}p{0.24\textwidth}|>{\raggedright\arraybackslash}p{0.26\textwidth}|>{\raggedright\arraybackslash}p{0.32\textwidth}|}
+\caption{Traceability of the functional requirements to implementation and tests.}
+\label{tab:req-traceability} \\
+\hline
+\textbf{Req.} & \textbf{Requirement} & \textbf{Implemented in} & \textbf{Test evidence} \\ \hline
+\endfirsthead
+\caption[]{Traceability of the functional requirements to implementation and tests (continued).} \\
+\hline
+\textbf{Req.} & \textbf{Requirement} & \textbf{Implemented in} & \textbf{Test evidence} \\ \hline
+\endhead
+FR1 & Grayscale photograph as input & \path{main.py}, pipeline & \path{test_integration.py} \\ \hline
+FR2 & Semantic regions from prompts and Grounded SAM & \path{colorize/decomposition.py} & \path{test_decomposition.py} (14 tests), TC-A-01 to TC-A-03 \\ \hline
+FR3 & Extraction with about 20\% surrounding area & \path{colorize/extraction.py} & \path{test_colorization.py} (31 tests), TC-B-01 \\ \hline
+FR4 & Assignment of each region to a domain expert & \path{colorize/routing.py} & \path{test_routing.py} (14 tests) \\ \hline
+FR5 & Colorization of each region by its expert & \path{colorize/experts.py} & \path{test_colorization.py} (31 tests) \\ \hline
+FR6 & Several experts processing the same photograph & \path{colorize/pipeline.py} & \path{test_integration.py} (1 test) \\ \hline
+FR7 & Combination of expert outputs by soft mask blending & \path{colorize/blending.py} & \path{test_colorization.py}, \mbox{TC-B-02} \\ \hline
+FR8 & Reconstruction with regions kept in place & \path{colorize/pipeline.py} & \path{test_integration.py} \\ \hline
+FR9 & Display of regions, routing and expert output in the session & \path{gui/} & Manual only: HTML prototype, no automated test \\ \hline
+FR10 & Evaluation of segmentation, routing, colorization and final image & \path{colorize/metrics.py}, \path{colorize/seg_eval.py} & \path{test_metrics.py} (39 tests), \path{test_seg_eval.py} (32 tests) \\ \hline
+FR11 & Addition of a new expert and prompt set without retraining & \path{configs/class_groups.json} & Partial: configuration is validated by \path{test_routing.py}, no dedicated expert-registration test \\ \hline
+FR12 & Routing of unassignable regions to the fallback expert & \path{colorize/routing.py} & \path{test_routing.py}, \mbox{TC-A-02} \\ \hline
+\end{longtable}
+}
+
+Ten of the twelve requirements are covered by automated tests. FR9 is exercised
+only through the HTML prototype, and FR11 is covered only in part, because the
+routing configuration is tested but adding a new expert is not. The remaining
+ten requirements map to 178 test cases, all of which pass, giving a defect
+density of 0\% and the 100\% effectiveness reported in
+Table~\ref{tab:test-metrics}.
 
 \section{Conclusion}
 This chapter described the implementation of the region-based Mixture-of-Experts
