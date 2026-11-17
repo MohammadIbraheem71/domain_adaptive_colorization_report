@@ -112,7 +112,6 @@ The project relates to SDG 11, Target 11.4, the protection of cultural heritage,
 \addcontentsline{toc}{chapter}{List of Tables}
 
 \mainmatter
-\continuouschapters
 
 
 \chapter{Introduction}
@@ -2722,7 +2721,7 @@ Plotting helpers & Metric bar plots (PSNR/SSIM/colorfulness), metric comparison 
 Test sets and ID lists & Fixed set sizes (20 each) and no overlaps; COCO path resolution and named-set loading; manifest validation (valid/missing/wrong domain); annotation file errors (missing/malformed); real-data guard for COCO annotations & 6 \\ \hline
 Baseline experiment (E3) & Resize/LAB helpers (shape preservation, dtype, range); input validation (2D/finite/positive); whole-image colorization with mocked model; E3 orchestration (T/L variants, summary/FID/manifest CSV output, Inception features) & 8 \\ \hline
 Test ID generation & Canonical val2017 ID file: 20 images per set, no overlap between sets, domain pools built from COCO annotations, and every sampled identifier checked on disk & 4 \\ \hline
-Integration & Person A + Person B handover: synthetic luminance $\to$ routing $\to$ extraction $\to$ mock experts $\to$ blending $\to$ reconstruction; verifies domains, fallback, patch/output shapes, expert color at region center, valid 8-bit RGB & 1 \\ \hline
+Integration & End-to-end flow with synthetic luminance: routing $\to$ extraction $\to$ mock experts $\to$ blending $\to$ reconstruction; verifies domains, fallback, patch/output shapes, expert color at region center, valid 8-bit RGB & 1 \\ \hline
 \textbf{Total} & & \textbf{178} \\ \hline
 \end{longtable}
 
