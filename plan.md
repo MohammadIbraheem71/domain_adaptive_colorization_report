@@ -1,65 +1,61 @@
-# Plan — Chapter page breaks and the last visible Person A/B reference
+# Plan — Chapter 7: keep only Section 7.1
 
-Status: **implemented**. Build and PDF checks pass (see section 5).
+Source: `f26_066_report/main.tex`. Line numbers are from the current 147-page
+build at `e772c94`.
 
-Source: `f26_066_report/main.tex`. Line numbers refer to the current build.
+Scope: Chapter 7 only. Keep 7.1, disable 7.2 and 7.3, rewrite the Chapter 7
+conclusion, fix cross-references, and keep the remaining prose coherent.
+No result claims, numbers, tables or figures in other chapters change.
 
-Scope: restore the template's chapter pagination and remove the one visible
-anonymous team-member reference. No result claims, numbers, test counts, tables
-or figures change.
+## What needs to be done
 
-## 1. Verified state
+1. Keep Section 7.1 (`main.tex:2212–2677`) as it is, except for step 2.
 
-- `main.tex:115` called `\continuouschapters` immediately after `\mainmatter`.
-  Defined in `FastFyp.cls:83-92`, it makes `\chapter` a `titlesec` "straight"
-  heading with no page break. `sample.tex` never calls it. As a result Chapter 7
-  began mid-page and the Chapter 8 running head appeared over Chapter 7 text.
-- `main.tex:2724` contained the only rendered "Person A"/"Person B" phrase, in
-  the Integration row of the test-case summary table (PDF page 107). Other
-  hits are a LaTeX comment (`main.tex:3784`), unused `person-c` labels
-  (`main.tex:2571,2665,2676`), and A-/B-/C- test IDs whose full template cases
-  already name the real authors (`main.tex:2754-2948`).
+2. At `main.tex:2580`, remove the trailing parenthetical
+   `(Section~\ref{sec:test-metrics})` from the extensibility sentence; it is
+   the only live reference into the sections being disabled.
 
-## 2. Chapter page breaks
+3. Comment out the continuous block `main.tex:2679–3147`, i.e. Section 7.2
+   (`Test case Design and description`, with 7.2.1–7.2.3.5) and Section 7.3
+   (`Test Metrics`, with 7.3.1–7.3.2). Wrap it in `\iffalse` / `\fi` and put
+   the markers on their own lines immediately before `\section{Conclusion}` at
+   `main.tex:3149`. There are no nested conditionals in the block. The
+   “Ten of the twelve requirements…” paragraph at `main.tex:3147` is the tail
+   of 7.3 and is already inside the block.
 
-Delete the `\continuouschapters` line, so `\mainmatter` is followed directly by
-`\chapter{Introduction}`. This matches `sample.tex` exactly:
+4. At `main.tex:2208`, rename the chapter heading from
+   `\chapter{Implementation and Test Cases}` to `\chapter{Implementation}`.
+   Otherwise the chapter title and TOC still advertise the removed sections.
 
-- The class already defines `\@makechapterhead` as a single-line "Chapter N
-  Title" in `\Large\bfseries`, so the heading style is effectively unchanged.
-- `FastFyp.cls` loads `book` with `oneside`, which defaults to `openany`, so
-  chapters start on the next page without inserted blank verso pages.
-- No edit to the university class file is needed.
+5. At `main.tex:2210`, shorten the Chapter 7 opening so it no longer says the
+   chapter covers “the test cases”; keep the implementation and evaluation
+   tooling description.
 
-## 3. Remove the visible Person A/B wording
+6. At `main.tex:2204`, change the Chapter 6 forward reference from “The next
+   chapter describes the implementation and test cases;” to “The next chapter
+   describes the implementation;”.
 
-Rewrite the Integration row's "What is checked" cell in the same words and
-length, keeping the pipeline chain and every check:
+7. Replace the Chapter 7 conclusion (`main.tex:3149–3162`) with one paragraph
+   about Section 7.1 only: the five-stage NumPy/PyTorch pipeline, configuration
+   and shared data structures, CLI and HTML concept, E4 runner with
+   prediction sharing and CSV resumability, data-driven extensibility,
+   evaluation tooling (metrics, fixed COCO sets, CSV records, plotting), and
+   status against the design. No test counts, pass rates, defect statements or
+   requirement-traceability claims.
 
-> Integration & End-to-end flow with synthetic luminance: routing -> extraction
-> -> mock experts -> blending -> reconstruction; verifies domains, fallback,
-> patch/output shapes, expert color at region center, valid 8-bit RGB & 1
+8. Leave untouched: Tables 7.2 and 7.3 (`tab:a_params`, `tab:a_label_map`),
+   Equations (7.2) and (7.3), all of Section 7.1’s 13 subsections, and every
+   other chapter. Also leave the coherent material that does not point into
+   7.2/7.3: §6.6 *Policies and Tactics* (`main.tex:2163`, `2173`, `2181`) and
+   `tab:traceability` (`2183`), the pytest row in the tools table (`2232`),
+   the “Extensibility test” procedure (`2578`), and the evaluation-tooling
+   paragraphs (`2589`, `2623–2671`).
 
-The non-rendered labels, comment and test-case IDs stay as they are.
+9. Build with `pdflatex -interaction=nonstopmode main.tex` twice. Check that
+   the chapter title in the TOC is “Implementation”, that there are no 7.2/7.3
+   test sections and no Table 7.20 in the List of Tables, that Tables 7.2/7.3
+   remain, that there are no undefined references or multiply-defined labels,
+   that no “178-test suite” text remains in Chapter 7, and that overfull boxes
+   do not increase.
 
-## 4. Verification
-
-- `pdflatex -interaction=nonstopmode main.tex` twice; exit 0, valid `%%EOF`.
-- No undefined references or citations, no multiply-defined labels.
-- Each of the 10 chapters, the bibliography and the appendix is the first body
-  content on its own page; the Chapter 8 header no longer sits over 7.4 text.
-- TOC chapter start pages regenerate; overfull count stays unchanged and no
-  severe underfull box is introduced.
-- `pdftotext main.pdf` contains no "Person A" or "Person B".
-
-## 5. Result
-
-- `\continuouschapters` removed; chapters now start on fresh pages like
-  `sample.tex`. Page count 142 -> 147, TOC starts: Ch1 p1, Ch2 p4, Ch3 p8,
-  Ch4 p23, Ch5 p37, Ch6 p55, Ch7 p74, Ch8 p103, Ch9 p104, Ch10 p124.
-- Integration row now reads "End-to-end flow with synthetic luminance: ...".
-- Build: `pdflatex` x2, exit 0, 147 pages, valid `%%EOF`, no undefined
-  references or citations, no multiply-defined labels. Overfull boxes 23 and
-  0 underfull vboxes, both unchanged. Underfull hboxes 162 -> 163: the one new
-  entry is badness 2253 in the rewritten table row, no badness-10000 entries
-  added.
+10. Do not commit or push the report changes until asked.
