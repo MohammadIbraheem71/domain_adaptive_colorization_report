@@ -2201,13 +2201,13 @@ Table~\ref{tab:traceability} relates each project objective to the components th
 
 \section{Conclusion}
 
-This chapter presented the pipeline architecture, component interfaces, and strategies for modularity, extensibility, and resource-aware execution. The core pipeline and evaluation tooling are implemented. Independent expert training and the Next.js/FastAPI interface remain planned extensions, and the current reconstruction uses working grayscale lightness. The next chapter describes the implementation and test cases; Chapter~\ref{ch:results} reports the experiments.
+This chapter presented the pipeline architecture, component interfaces, and strategies for modularity, extensibility, and resource-aware execution. The core pipeline and evaluation tooling are implemented. Independent expert training and the Next.js/FastAPI interface remain planned extensions, and the current reconstruction uses working grayscale lightness. The next chapter describes the implementation; Chapter~\ref{ch:results} reports the experiments.
 
 
 
 \chapter{Implementation and Test Cases}
 \label{ch:implementation}
-This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline, the evaluation tooling, and the test cases. It covers the five pipeline stages (decomposition, routing, extraction, colorization, blending), the configuration system, the web interface prototype, the E4 ablation runner, the extensibility mechanism, and the evaluation metrics with fixed test sets. The implementation follows the design of Chapter~\ref{ch:design} and produces the experimental results reported in Chapter~\ref{ch:results}.
+This chapter describes the implementation of the region-based Mixture-of-Experts colorization pipeline and the evaluation tooling. It covers the five pipeline stages (decomposition, routing, extraction, colorization, blending), the configuration system, the web interface prototype, the E4 ablation runner, the extensibility mechanism, and the evaluation metrics with fixed test sets. The implementation follows the design of Chapter~\ref{ch:design} and produces the experimental results reported in Chapter~\ref{ch:results}.
 
 \section{Implementation}
 This section describes the implemented five-stage pipeline: decomposition, routing, extraction, colorization, and blending/reconstruction. NumPy supports the deterministic processing logic, while PyTorch and pretrained-model libraries support neural inference. Synthetic inputs and model stand-ins allow CPU testing of the surrounding logic; actual decomposition and DDColor inference require the relevant model dependencies. A CLI runs the pipeline, and a separate HTML concept demonstrates the intended interface. Full Next.js/FastAPI integration, domain fine-tuning, and the trained fifth-expert evaluation remain for FYP-2.
@@ -2577,7 +2577,7 @@ The design (Section~\ref{sec:extensibility}) requires adding a new expert withou
     \item \textbf{Verification}: Compare checksums of the four existing checkpoints before and after the addition to confirm they are unchanged.
     \item \textbf{Extensibility test}: Run the pipeline on existing-domain images before and after the addition. Measure IoU of region masks and FID/LPIPS of final outputs. Check whether changed detections, ownership, and blending contributions affect existing-domain outputs while their expert weights remain fixed (Section~\ref{sec:extensibility}).
 \end{enumerate}
-The procedure is intended to leave existing checkpoints and stage algorithms unchanged, although prompts can affect detections and overlaps. Current tests cover routing configuration only; adding and evaluating a trained expert has not been validated by the suite (Section~\ref{sec:test-metrics}).
+The procedure is intended to leave existing checkpoints and stage algorithms unchanged, although prompts can affect detections and overlaps. Current tests cover routing configuration only; adding and evaluating a trained expert has not been validated by the suite.
 
 \subsection{Evaluation Tooling}
 \label{subsec:evaluation-tooling}
@@ -2676,6 +2676,7 @@ fine-tuning performed by this project. Evaluation involving LPIPS remains
 optional and depends on its external packages and feature model. The real-data
 COCO guard also remains conditional on access to the COCO annotations and
 images.
+\iffalse
 \section{Test case Design and description}
 This section presents the test cases for all implemented components. The test suite comprises 178 automated tests covering decomposition, routing, extraction, colorization wrapper, blending, E4 pipeline ablations, evaluation metrics, plotting, test sets, baseline experiments, test-ID generation, and end-to-end integration. Tests use synthetic data and model stand-ins, requiring no GPU or model weights. Representative cases are given in the full QA template format below; the complete list is summarized in Table~\ref{tab:a_test_summary}.
 
@@ -3145,24 +3146,32 @@ FR12 & Discard unassignable regions; fallback for pixels without an owner & \pat
 }
 
 Ten of the twelve requirements have automated test evidence for their implemented logic. FR9's integrated web display is deferred; the HTML concept does not demonstrate actual masks or expert outputs, although scripts and the CLI can save them. FR11 is covered only in part because routing configuration is tested but adding a trained expert is not. The suite records 178 passing tests and zero failures. These counts describe execution status, not defect density, complete requirement satisfaction, or proof that no defects remain.
+\fi
 
 \section{Conclusion}
 This chapter described the implementation of the region-based Mixture-of-Experts
-colorization pipeline and its evaluation tooling. The five pipeline stages
-(decomposition, routing, extraction, colorization and blending) are implemented
-as separate NumPy/PyTorch modules, and the E4 runner adds margin-based
-prediction sharing, CSV resumability and a four-command CLI. Extensibility is
-data-driven, so adding a domain requires configuration and a checkpoint rather
-than changes to the other experts. The evaluation tooling provides ten
-image-quality metrics, fixed COCO test sets with annotation validation, CSV
-result handling and plotting. The 178-test suite covers these components at
-unit, integration and data-validation level using synthetic data and model
-stand-ins, and all tests pass in the recorded environment. The CLI runs inference, while the HTML concept is separate; full Next.js/FastAPI integration is
-deferred to FYP-2.
+colorization pipeline. The five processing stages (decomposition, routing,
+extraction, colorization and blending/reconstruction) are implemented as
+separate modules, with NumPy supporting the deterministic logic and PyTorch
+and pretrained-model wrappers supporting neural inference. Configuration and
+shared data structures hold the prompts, label-to-domain mapping, expert
+registry and exchanged data types used across the stages. A command-line
+interface runs inference, and a standalone HTML concept shows the intended
+interaction; full Next.js/FastAPI integration remains for FYP-2. The E4 runner
+shares predicted chrominance canvases across ablations and writes append-only
+CSV records that support resumability. Extensibility is data-driven, so adding
+a domain requires prompts, a mapping entry and a checkpoint rather than changes
+to the existing experts. The evaluation tooling provides image-quality metrics,
+fixed COCO test sets with annotation validation, CSV result handling and
+plotting. The implemented components follow the design of Chapter~\ref{ch:design};
+independently trained domain experts and the integrated web interface remain
+planned extensions.
+\iffalse
 \chapter{User Manual}
 \label{ch:user-manual}
 \textcolor{red}{This chapter will be added in FYP-II.} Design a complete user manual of your application and add that in this chapter.
 \textcolor{red}{NOTE: This Chapter is optional for Research projects but compulsory for Development projects.}
+\fi
 
 \chapter{Experimental Results and Discussion}
 \label{ch:results}
