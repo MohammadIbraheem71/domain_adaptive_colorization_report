@@ -107,21 +107,11 @@ Colorizing grayscale photographs is an underconstrained problem because differen
 
 \section*{Executive Summary}
 
-A grayscale photograph admits several plausible colorizations. This project investigates whether semantic decomposition and domain-based processing can improve colorization while retaining a coherent image. General-purpose models provide the baselines for examining this approach.
+A grayscale photograph admits several plausible colorizations. This project investigates whether semantic decomposition and domain-based processing can improve colorization while retaining a coherent image. General-purpose models provide the baselines for examining this approach. Grounded-SAM detects regions from predefined prompts. A fixed lookup assigns each region to one of four domain slots: people, nature, urban scenes, and animals. Context-expanded crops receive DDColor chrominance predictions, and soft masks combine these predictions with grayscale lightness. Uncovered pixels receive a fallback prediction. All slots currently use the same pretrained DDColor-T checkpoint; independently fine-tuned specialists remain planned. The project has five objectives: identify semantic regions across the four domains, train a specialized colorization expert for each domain, route detected regions to the correct expert, merge the expert outputs with smooth transitions, and demonstrate the addition of a further expert without retraining the existing ones.
 
-Grounded-SAM detects regions from predefined prompts. A fixed lookup assigns each region to one of four domain slots: people, nature, urban scenes, and animals. Context-expanded crops receive DDColor chrominance predictions, and soft masks combine these predictions with grayscale lightness. Uncovered pixels receive a fallback prediction. All slots currently use the same pretrained DDColor-T checkpoint; independently fine-tuned specialists remain planned.
+The five-stage pipeline runs through Python scripts, a CLI, and evaluation notebooks. A standalone HTML concept simulates the proposed interaction without calling the models. Integration of a Next.js frontend and FastAPI backend remains for FYP-2. FYP-1 experiments used cloud notebook GPU resources. The completed E1 and E2 experiments measure decomposition quality, coverage, and region-count routing accuracy. E3 compares pretrained DDColor-T and DDColor-L on whole images; E4 evaluates regional processing with shared weights. Image measures include PSNR, SSIM, CIEDE2000 color difference, reference-edge error, LPIPS, and colorfulness. E3 also reports FID. The results show limited coverage, uneven routing across domains, and metric-specific trade-offs against whole-image inference.
 
-The project has five objectives: identify semantic regions across the four domains, train a specialized colorization expert for each domain, route detected regions to the correct expert, merge the expert outputs with smooth transitions, and demonstrate the addition of a further expert without retraining the existing ones.
-
-The five-stage pipeline runs through Python scripts, a CLI, and evaluation notebooks. A standalone HTML concept simulates the proposed interaction without calling the models. Integration of a Next.js frontend and FastAPI backend remains for FYP-2. FYP-1 experiments used cloud notebook GPU resources.
-
-The completed E1 and E2 experiments measure decomposition quality, coverage, and region-count routing accuracy. E3 compares pretrained DDColor-T and DDColor-L on whole images; E4 evaluates regional processing with shared weights. Image measures include PSNR, SSIM, CIEDE2000 color difference, reference-edge error, LPIPS, and colorfulness. E3 also reports FID. The results show limited coverage, uneven routing across domains, and metric-specific trade-offs against whole-image inference.
-
-The project covers still photographs; video and medical images are outside scope. Generated colors are plausible interpretations rather than verified historical colors. Missed or mislabeled regions can affect routing and reconstruction, so intermediate results are evaluated alongside the final image.
-
-FYP-1 completed the study, design, five-stage implementation, evaluation tooling, automated tests, and E1--E4 experiments. FYP-2 will fine-tune the four experts, train the pooled-data baseline, evaluate distinct experts and shuffled routing, demonstrate a trained fifth expert, integrate the web interface, and broaden evaluation. Whether domain specialization improves colorization remains unestablished.
-
-The project relates to SDG 11, Target 11.4, by supporting supplementary colorized presentations of historical photographs while preserving the original monochrome records.
+The project covers still photographs; video and medical images are outside scope. Generated colors are plausible interpretations rather than verified historical colors. Missed or mislabeled regions can affect routing and reconstruction, so intermediate results are evaluated alongside the final image. FYP-1 completed the study, design, five-stage implementation, evaluation tooling, automated tests, and E1--E4 experiments. FYP-2 will fine-tune the four experts, train the pooled-data baseline, evaluate distinct experts and shuffled routing, demonstrate a trained fifth expert, integrate the web interface, and broaden evaluation. Whether domain specialization improves colorization remains unestablished. The project relates to SDG 11, Target 11.4, by supporting supplementary colorized presentations of historical photographs while preserving the original monochrome records.
 \pagebreak
 
 
@@ -142,11 +132,9 @@ The project relates to SDG 11, Target 11.4, by supporting supplementary colorize
 \chapter{Introduction}
 Image colorization involves assigning plausible colors to grayscale images while preserving their visual structure. It has applications in presenting historical photographs, producing digital media, and supporting visual interpretation \cite{ref21}. However, grayscale images do not contain enough information to determine the original colors of every object. Different colors may have similar brightness values, making colorization an underconstrained problem with several plausible outputs \cite{ref1,ref11}. Existing research identifies this ambiguity as a source of incorrect semantic colors and limited color richness in automatically colorized images \cite{ref1,ref9}.
 
-Recent approaches have explored how semantic understanding and visual context can improve colorization \cite{ref2,ref9,ref11}. DDColor \cite{ref9} combines a pixel decoder with a query-based color decoder to connect spatial features with semantic color representations and reduce color bleeding. Its findings demonstrate the importance of considering both image structure and object meaning when predicting colors. Nevertheless, these findings do not establish that a single model is inherently incapable of handling multiple domains; rather, they motivate further investigation into alternative ways of organizing colorization expertise.
+Recent approaches have explored how semantic understanding and visual context can improve colorization \cite{ref2,ref9,ref11}. DDColor \cite{ref9} combines a pixel decoder with a query-based color decoder to connect spatial features with semantic color representations and reduce color bleeding. Its findings demonstrate the importance of considering both image structure and object meaning when predicting colors. Nevertheless, these findings do not establish that a single model is inherently incapable of handling multiple domains; rather, they motivate further investigation into alternative ways of organizing colorization expertise. The project, Mixture of Experts Framework for Domain Adaptive Colorization, investigates a region-based alternative. The implemented pipeline identifies semantic regions, routes them to slots for portraits and people, nature and landscapes, urban and man-made scenes, and animals, and combines their crop predictions into one image. FYP-1 evaluates this architecture with shared pretrained weights. FYP-2 will test whether separately fine-tuned experts improve domain-specific color quality and semantic consistency while maintaining coherence across the photograph.
 
-The project, Mixture of Experts Framework for Domain Adaptive Colorization, investigates a region-based alternative. The implemented pipeline identifies semantic regions, routes them to slots for portraits and people, nature and landscapes, urban and man-made scenes, and animals, and combines their crop predictions into one image. FYP-1 evaluates this architecture with shared pretrained weights. FYP-2 will test whether separately fine-tuned experts improve domain-specific color quality and semantic consistency while maintaining coherence across the photograph.
-
-\section{Purpose of this Document}
+\section{Purpose of This Document}
 This FYP-1 report documents the research motivation, objectives, requirements, design, implementation, and completed evaluation of the region-based colorization framework. It distinguishes the implemented pipeline and E1--E4 experiments from the remaining expert-training, extensibility, and interface-integration work. The central research question is whether semantic decomposition combined with domain-specialized experts can improve color quality relative to general-purpose approaches. The current shared-checkpoint experiments establish the pipeline's operation and limitations; they do not yet answer the specialization question. Generated colors are plausible interpretations, and historical color authenticity cannot be established from grayscale information alone.
 \section{Intended Audience}
 The primary audience for this document comprises the project supervisor and academic evaluation panel, who will assess the project's motivation, feasibility, technical approach, and alignment with its stated objectives, while also supporting the development team by clearly defining the system's boundaries and expected behavior. A secondary audience includes researchers and students interested in image colorization, semantic segmentation, and modular expert-based architectures, as well as practitioners in historical preservation or digital media who may use the document to understand the proposed application and its limitations. Although the document is structured to be accessible, technical knowledge of machine learning and image processing will be helpful for fully interpreting the architecture design and evaluation measures.
@@ -167,9 +155,7 @@ The project envisions a photographic colorization system that combines domain-sp
 \section{Problem Domain Overview}
 The project belongs to the domain of automatic image colorization. Its input is a grayscale photograph, and its output is a colorized image produced through semantic decomposition, routing, contextual crop processing, and blending. The four initial domains are portraits and people, nature and landscapes, urban and man-made scenes, and animals. These domains describe expert responsibilities rather than mutually exclusive categories of complete photographs.
 
-Research on automatic colorization demonstrates the importance of considering multiple plausible colors and the surrounding scene context \cite{ref1,ref11}. Cong et al. \cite{ref11} propose generating reference images that guide colorization and permit localized modifications. Their work supports the relevance of contextual color reasoning, although reference generation and interactive editing are not components of the proposed project. The present framework instead investigates whether separately trained domain experts can provide useful specialization.
-
-For region decomposition, the project uses pretrained Grounded-SAM \cite{ref17} with predefined prompts such as person, animal, building, sky, and vegetation. Grounded-SAM combines Grounding DINO \cite{liu2024groundingdino} with SAM \cite{kirillov2023sam} to support detection and segmentation based on text inputs. This provides a basis for identifying regions associated with the project's expert domains without requiring users to enter prompts manually.
+Research on automatic colorization demonstrates the importance of considering multiple plausible colors and the surrounding scene context \cite{ref1,ref11}. Cong et al. \cite{ref11} propose generating reference images that guide colorization and permit localized modifications. Their work supports the relevance of contextual color reasoning, although reference generation and interactive editing are not components of the proposed project. The present framework instead investigates whether separately trained domain experts can provide useful specialization. For region decomposition, the project uses pretrained Grounded-SAM \cite{ref17} with predefined prompts such as person, animal, building, sky, and vegetation. Grounded-SAM combines Grounding DINO \cite{liu2024groundingdino} with SAM \cite{kirillov2023sam} to support detection and segmentation based on text inputs. This provides a basis for identifying regions associated with the project's expert domains without requiring users to enter prompts manually.
 
 Each identified region is cropped with a contextual margin and processed through its assigned expert slot. Soft-mask blending combines the outputs. The current experiments vary the margin and blending settings with model weights held fixed. In this project, MoE refers to region-level selection among separate expert slots, rather than token-level routing within a transformer. Whether independently trained experts improve this regional architecture remains an experimental question for FYP-2.
 \section{Problem Statement}
@@ -281,33 +267,23 @@ This subsection reviews the foundational deep-learning approaches to automatic i
 
 \subsubsection{Colorful Image Colorization}
 
-Zhang, Isola, and Efros introduced a fully automatic deep-learning approach to grayscale image colorization by treating color prediction as a classification problem rather than straightforward deterministic regression \cite{ref1}. Their approach used a large-scale collection of color images and class rebalancing to address the tendency of colorization models to produce desaturated results. The work demonstrated that the inherent uncertainty of grayscale-to-color mapping should be explicitly considered because multiple plausible colors can correspond to the same luminance information. The authors also introduced a human evaluation in which generated images were compared with ground-truth photographs.
-
-A major strength of this work is that it shows colorization is not a simple task because there can be many possible colors for the same grayscale image. Treating colorization as a prediction problem helped later studies focus on producing more varied and realistic colors. However, it is still a general-purpose model and does not divide the image into different semantic regions or use specialized models for them.
+Zhang, Isola, and Efros introduced a fully automatic deep-learning approach to grayscale image colorization by treating color prediction as a classification problem rather than straightforward deterministic regression \cite{ref1}. Their approach used a large-scale collection of color images and class rebalancing to address the tendency of colorization models to produce desaturated results. The work demonstrated that the inherent uncertainty of grayscale-to-color mapping should be explicitly considered because multiple plausible colors can correspond to the same luminance information. The authors also introduced a human evaluation in which generated images were compared with ground-truth photographs. A major strength of this work is that it shows colorization is not a simple task because there can be many possible colors for the same grayscale image. Treating colorization as a prediction problem helped later studies focus on producing more varied and realistic colors. However, it is still a general-purpose model and does not divide the image into different semantic regions or use specialized models for them.
 
 The relationship to the proposed project is important because the proposed system also treats grayscale-to-color mapping as an uncertain prediction task. However, instead of using one general model, it uses multiple specialized experts to handle different image regions. This allows the system to better handle the different types of content found in an image.
 
-\subsubsection{Let There Be Color!: Joint End-to-End Learning of Global and Local Image Priors}
+\subsubsection{Let There Be Color!: Joint End-To-End Learning of Global and Local Image Priors}
 
-Iizuka, Simo-Serra, and Ishikawa proposed a colorization method that combines global scene information with local image information \cite{ref2}. The method uses the overall scene to help decide suitable colors, while local information helps produce detailed color predictions.
-
-A key strength of this approach is that it combines scene understanding with local color prediction. This is useful because individual pixels usually do not contain enough information to determine their correct color. However, both types of information are handled within one colorization model rather than through separate domain-specific experts.
-
-The proposed framework extends this idea by first identifying meaningful image regions and then including additional context around them. The approximately 20\% (variable to allow for testing) extra region boundary would help preserve surrounding information while allowing specialized experts to process individual regions.
+Iizuka, Simo-Serra, and Ishikawa proposed a colorization method that combines global scene information with local image information \cite{ref2}. The method uses the overall scene to help decide suitable colors, while local information helps produce detailed color predictions. A key strength of this approach is that it combines scene understanding with local color prediction. This is useful because individual pixels usually do not contain enough information to determine their correct color. However, both types of information are handled within one colorization model rather than through separate domain-specific experts. The proposed framework extends this idea by first identifying meaningful image regions and then including additional context around them. The approximately 20\% (variable to allow for testing) extra region boundary would help preserve surrounding information while allowing specialized experts to process individual regions.
 
 \subsubsection{Real-Time User-Guided Image Colorization with Learned Deep Priors}
 
-Zhang et al. developed a user-guided colorization system where users provide a small number of color hints that are then spread across the image using a CNN-based model \cite{ref3}. Instead of depending only on automatically predicted colors, the system allows users to give local color information to guide the colorization process. The method also suggests possible colors and uses learned semantic information to apply the user\textquotesingle s guidance to relevant areas.
-
-The main strength of this approach is the control it gives to the user. Users can adjust or guide the colors of uncertain regions instead of relying completely on automatic predictions. However, the system depends on user-provided color hints, while the proposed project uses predefined prompts and automatic region decomposition without requiring manual input from the user.
+Zhang et al. developed a user-guided colorization system where users provide a small number of color hints that are then spread across the image using a CNN-based model \cite{ref3}. Instead of depending only on automatically predicted colors, the system allows users to give local color information to guide the colorization process. The method also suggests possible colors and uses learned semantic information to apply the user\textquotesingle s guidance to relevant areas. The main strength of this approach is the control it gives to the user. Users can adjust or guide the colors of uncertain regions instead of relying completely on automatic predictions. However, the system depends on user-provided color hints, while the proposed project uses predefined prompts and automatic region decomposition without requiring manual input from the user.
 
 This work is relevant because it shows one way of dealing with uncertainty in image colorization. The proposed framework follows a different approach: instead of relying on the user to handle uncertain regions, it uses semantic routing and domain-specialized experts to deal with differences between image domains.
 
 \subsubsection{Deep Exemplar-Based Colorization}
 
-He et al. proposed a deep exemplar-based method in which a grayscale image is colorized using a separate reference color image \cite{ref4}. The method includes components that measure the similarity between the reference and target images and then use this information to predict and transfer chrominance. The authors also introduced an automatic reference recommendation method based on semantic and luminance information.
-
-The main strength of this approach is the control provided through reference selection. Different reference images can produce different colorization results, giving users more flexibility compared to a fully automatic method. However, the main limitation compared to the proposed project is that it depends on a reference image. It does not divide the target image into different domain-specific regions or process those regions separately using specialized experts.
+He et al. proposed a deep exemplar-based method in which a grayscale image is colorized using a separate reference color image \cite{ref4}. The method includes components that measure the similarity between the reference and target images and then use this information to predict and transfer chrominance. The authors also introduced an automatic reference recommendation method based on semantic and luminance information. The main strength of this approach is the control provided through reference selection. Different reference images can produce different colorization results, giving users more flexibility compared to a fully automatic method. However, the main limitation compared to the proposed project is that it depends on a reference image. It does not divide the target image into different domain-specific regions or process those regions separately using specialized experts.
 
 The proposed project follows a similar idea that different visual contexts may need different color information. However, instead of using an external reference image, the proposed system gets domain-specific knowledge from separately trained experts.
 
@@ -317,95 +293,51 @@ This subsection reviews colorization methods built on transformers, generative p
 
 \subsubsection{Colorization Transformer}
 
-Kumar, Weissenborn, and Kalchbrenner introduced the Colorization Transformer, which applies self-attention to the colorization problem \cite{ref5}. The system first generates a low-resolution coarse colorization and subsequently uses parallel networks to obtain higher-resolution output. The transformer architecture is designed to capture long-range dependencies, allowing information from distant image regions to influence color prediction.
-
-The strength of transformer-based colorization is its ability to model relationships extending beyond local convolutional neighborhoods. The approach also supports multiple colorization samples rather than relying exclusively on one deterministic output. A limitation is that the model remains fundamentally general-purpose rather than explicitly specialized according to semantic domains.
-
-The proposed framework can benefit from this literature when designing individual experts. However, the main architectural distinction is that the proposed system places domain specialization outside the individual colorization model by routing semantic regions to separate experts.
+Kumar, Weissenborn, and Kalchbrenner introduced the Colorization Transformer, which applies self-attention to the colorization problem \cite{ref5}. The system first generates a low-resolution coarse colorization and subsequently uses parallel networks to obtain higher-resolution output. The transformer architecture is designed to capture long-range dependencies, allowing information from distant image regions to influence color prediction. The strength of transformer-based colorization is its ability to model relationships extending beyond local convolutional neighborhoods. The approach also supports multiple colorization samples rather than relying exclusively on one deterministic output. A limitation is that the model remains fundamentally general-purpose rather than explicitly specialized according to semantic domains. The proposed framework can benefit from this literature when designing individual experts. However, the main architectural distinction is that the proposed system places domain specialization outside the individual colorization model by routing semantic regions to separate experts.
 
 \subsubsection{Towards Vivid and Diverse Image Colorization With Generative Color Prior}
 
-Wu et al. investigated the use of a pretrained GAN as a generative color prior \cite{ref6}. Their approach extracts features representing plausible color distributions and incorporates those features into the colorization process. The resulting method seeks vivid and diverse outputs rather than the desaturated results frequently associated with deterministic prediction.
-
-The approach demonstrates that an explicit generative color prior can improve chromatic richness and diversity. Nevertheless, the color prior is still learned as part of a general colorization framework rather than being explicitly divided according to semantic domains.
-
-The proposed project is related because its objective also includes realistic and perceptually convincing color. The difference is that the proposed project obtains specialization through multiple domain experts rather than through one generalized generative color prior.
+Wu et al. investigated the use of a pretrained GAN as a generative color prior \cite{ref6}. Their approach extracts features representing plausible color distributions and incorporates those features into the colorization process. The resulting method seeks vivid and diverse outputs rather than the desaturated results frequently associated with deterministic prediction. The approach demonstrates that an explicit generative color prior can improve chromatic richness and diversity. Nevertheless, the color prior is still learned as part of a general colorization framework rather than being explicitly divided according to semantic domains. The proposed project is related because its objective also includes realistic and perceptually convincing color. The difference is that the proposed project obtains specialization through multiple domain experts rather than through one generalized generative color prior.
 
 \subsubsection{BigColor}
 
-Kim et al. introduced BigColor, a generative color-prior approach intended to improve colorization of complex in-the-wild images \cite{ref7}. The authors specifically identified limitations in previous generative priors that attempted to model both image structure and color simultaneously. BigColor instead focuses its generative prior on color synthesis while preserving spatial structure.
+Kim et al. introduced BigColor, a generative color-prior approach intended to improve colorization of complex in-the-wild images \cite{ref7}. The authors specifically identified limitations in previous generative priors that attempted to model both image structure and color simultaneously. BigColor instead focuses its generative prior on color synthesis while preserving spatial structure. The principal strength is its focus on separating color generation from structural representation. The method supports diverse colorization results and arbitrary input resolutions. Its limitation in relation to the proposed project is that its specialization is still encoded inside a unified generative architecture rather than explicitly assigned by image region. The proposed project similarly recognizes that image structure and color prediction are closely related, but takes a different architectural route. Semantic decomposition is performed first, after which each region is assigned to an expert whose training data corresponds to a specific domain.
 
-The principal strength is its focus on separating color generation from structural representation. The method supports diverse colorization results and arbitrary input resolutions. Its limitation in relation to the proposed project is that its specialization is still encoded inside a unified generative architecture rather than explicitly assigned by image region.
+\subsubsection{Palette: Image-To-Image Diffusion Models}
 
-The proposed project similarly recognizes that image structure and color prediction are closely related, but takes a different architectural route. Semantic decomposition is performed first, after which each region is assigned to an expert whose training data corresponds to a specific domain.
-
-\subsubsection{Palette: Image-to-Image Diffusion Models}
-
-Saharia et al. introduced Palette, a unified conditional diffusion framework for image-to-image translation, including colorization \cite{ref8}. The work evaluates diffusion-based translation on several image restoration and transformation tasks and demonstrates the ability of conditional diffusion models to generate plausible image outputs.
-
-Palette is significant because diffusion provides another mechanism for representing the multiple plausible outputs inherent to image-to-image translation. However, the framework is designed as a general image-to-image model and does not implement the proposed region-level domain-specialized expert architecture.
-
-For the proposed work, Palette demonstrates the importance of multimodal generative modeling but does not resolve the specific problem of conflicting color distributions between different semantic domains within the same photograph.
+Saharia et al. introduced Palette, a unified conditional diffusion framework for image-to-image translation, including colorization \cite{ref8}. The work evaluates diffusion-based translation on several image restoration and transformation tasks and demonstrates the ability of conditional diffusion models to generate plausible image outputs. Palette is significant because diffusion provides another mechanism for representing the multiple plausible outputs inherent to image-to-image translation. However, the framework is designed as a general image-to-image model and does not implement the proposed region-level domain-specialized expert architecture. For the proposed work, Palette demonstrates the importance of multimodal generative modeling but does not resolve the specific problem of conflicting color distributions between different semantic domains within the same photograph.
 
 \subsubsection{DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders}
 
-Kang et al. introduced DDColor, an end-to-end colorization architecture containing a pixel decoder and a query-based color decoder \cite{ref9}. The two components jointly connect multi-scale semantic representations with color queries. The authors specifically address semantic color errors, low color richness, and color bleeding. A colorfulness loss is also used to encourage richer outputs.
-
-DDColor represents a strong general-purpose baseline because it explicitly combines semantic representations with detailed color reconstruction. Its limitation for the proposed project is architectural specialization: it remains a single colorization model rather than a framework where semantically different regions are routed to separate domain experts.
-
-The proposed system can therefore use DDColor-type principles as a conceptual baseline for individual experts, while the principal research contribution remains the region-level MoE architecture. The official implementation also demonstrates that contemporary colorization models can be trained and evaluated as reusable software components \cite{ref10}.
+Kang et al. introduced DDColor, an end-to-end colorization architecture containing a pixel decoder and a query-based color decoder \cite{ref9}. The two components jointly connect multi-scale semantic representations with color queries. The authors specifically address semantic color errors, low color richness, and color bleeding. A colorfulness loss is also used to encourage richer outputs. DDColor represents a strong general-purpose baseline because it explicitly combines semantic representations with detailed color reconstruction. Its limitation for the proposed project is architectural specialization: it remains a single colorization model rather than a framework where semantically different regions are routed to separate domain experts. The proposed system can therefore use DDColor-type principles as a conceptual baseline for individual experts, while the principal research contribution remains the region-level MoE architecture. The official implementation also demonstrates that contemporary colorization models can be trained and evaluated as reusable software components \cite{ref10}.
 
 \subsubsection{Automatic Controllable Colorization via Imagination}
 
-Cong et al. proposed an automatic colorization framework that generates candidate reference images through an imagination module and subsequently refines those references before applying them to colorization \cite{ref11}. The system addresses the ambiguity of colorization by generating multiple possible visual references and selecting suitable information for the target.
+Cong et al. proposed an automatic colorization framework that generates candidate reference images through an imagination module and subsequently refines those references before applying them to colorization \cite{ref11}. The system addresses the ambiguity of colorization by generating multiple possible visual references and selecting suitable information for the target. A significant strength is its support for iterative and localized colorization modifications. It demonstrates that automatically generated semantic references can improve colorization flexibility. Its limitation relative to the proposed work is that the generated references are not organized as independently trained domain experts. The proposal explicitly cites this work as evidence that grayscale-to-color mapping is multimodal. The proposed framework addresses the same ambiguity from another direction: semantic decomposition and domain-specific specialization rather than generated reference-image selection.
 
-A significant strength is its support for iterative and localized colorization modifications. It demonstrates that automatically generated semantic references can improve colorization flexibility. Its limitation relative to the proposed work is that the generated references are not organized as independently trained domain experts.
-
-The proposal explicitly cites this work as evidence that grayscale-to-color mapping is multimodal. The proposed framework addresses the same ambiguity from another direction: semantic decomposition and domain-specific specialization rather than generated reference-image selection.
-
-\subsection{Mixture-of-Experts and Conditional Computation}
+\subsection{Mixture-Of-Experts and Conditional Computation}
 
 This subsection reviews mixture-of-experts and conditional computation. It covers sparse gating, large-scale routing, mixture models for image assessment, and a remote-sensing MoE, with attention to how the routing principle carries over from whole inputs to semantic image regions.
 
-\subsubsection{Sparsely-Gated Mixture-of-Experts}
+\subsubsection{Sparsely-Gated Mixture-Of-Experts}
 
-Shazeer et al. introduced sparsely gated Mixture-of-Experts layers as a mechanism for increasing model capacity while activating only a subset of expert networks for a particular input \cite{ref12}. A trainable gating network determines which experts participate in processing an input. The work established an important foundation for conditional computation and expert specialization.
-
-The central strength of MoE is the ability to allocate specialized computation to different inputs without requiring every expert to process every input. However, the original application was not image colorization, and its routing mechanism operates at the model/input level rather than according to semantic image regions.
-
-The proposed project adapts the underlying specialization principle to a different problem. Instead of routing complete examples or transformer tokens, the proposed framework routes semantically identified regions to domain-specific colorization experts.
+Shazeer et al. introduced sparsely gated Mixture-of-Experts layers as a mechanism for increasing model capacity while activating only a subset of expert networks for a particular input \cite{ref12}. A trainable gating network determines which experts participate in processing an input. The work established an important foundation for conditional computation and expert specialization. The central strength of MoE is the ability to allocate specialized computation to different inputs without requiring every expert to process every input. However, the original application was not image colorization, and its routing mechanism operates at the model/input level rather than according to semantic image regions. The proposed project adapts the underlying specialization principle to a different problem. Instead of routing complete examples or transformer tokens, the proposed framework routes semantically identified regions to domain-specific colorization experts.
 
 \subsubsection{Switch Transformers}
 
-Fedus, Zoph, and Shazeer developed the Switch Transformer to simplify sparse expert routing and improve the efficiency and stability of large-scale MoE models \cite{ref13}. The architecture routes each token to an expert and thereby separates parameter capacity from the amount of computation performed for every token.
-
-Switch Transformers demonstrate that expert routing can be practical when the routing mechanism is carefully designed. Nevertheless, the architecture is primarily concerned with token-level conditional computation and was not designed for semantic image-region colorization.
-
-The proposed project differs by defining experts according to photographic domains and by performing routing at the level of semantically decomposed regions. This distinction is central to the project\textquotesingle s intended contribution.
+Fedus, Zoph, and Shazeer developed the Switch Transformer to simplify sparse expert routing and improve the efficiency and stability of large-scale MoE models \cite{ref13}. The architecture routes each token to an expert and thereby separates parameter capacity from the amount of computation performed for every token. Switch Transformers demonstrate that expert routing can be practical when the routing mechanism is carefully designed. Nevertheless, the architecture is primarily concerned with token-level conditional computation and was not designed for semantic image-region colorization. The proposed project differs by defining experts according to photographic domains and by performing routing at the level of semantically decomposed regions. This distinction is central to the project\textquotesingle s intended contribution.
 
 \subsubsection{Mixture of a Million Experts}
 
-He proposed PEER, a parameter-efficient expert retrieval mechanism capable of retrieving from a very large pool of small experts using product-key retrieval \cite{ref14}. The work investigates how a large number of small experts can provide increased capacity without activating all parameters simultaneously.
-
-The work strengthens the theoretical motivation for modular expert architectures and shows that fine-grained specialization can be scaled efficiently. However, its experiments concern language-modeling tasks rather than image colorization.
-
-The relevance to the proposed project lies primarily in extensibility. The proposal specifically requires the architecture to support incorporation of new domain experts without rebuilding the entire system or modifying existing experts. The concept of modular expert addition is therefore consistent with broader MoE research.
+He proposed PEER, a parameter-efficient expert retrieval mechanism capable of retrieving from a very large pool of small experts using product-key retrieval \cite{ref14}. The work investigates how a large number of small experts can provide increased capacity without activating all parameters simultaneously. The work strengthens the theoretical motivation for modular expert architectures and shows that fine-grained specialization can be scaled efficiently. However, its experiments concern language-modeling tasks rather than image colorization. The relevance to the proposed project lies primarily in extensibility. The proposal specifically requires the architecture to support incorporation of new domain experts without rebuilding the entire system or modifying existing experts. The concept of modular expert addition is therefore consistent with broader MoE research.
 
 \subsubsection{Gamma: Toward Generic Image Assessment with Mixture of Assessment Experts}
 
-Zhou et al. introduced Gamma, a mixture-of-assessment-experts framework designed to handle diverse image-assessment tasks and datasets \cite{ref15}. The system uses shared and adaptive experts to capture common and domain-specific information and additionally uses scene-related prompting.
+Zhou et al. introduced Gamma, a mixture-of-assessment-experts framework designed to handle diverse image-assessment tasks and datasets \cite{ref15}. The system uses shared and adaptive experts to capture common and domain-specific information and additionally uses scene-related prompting. Gamma is especially relevant because it demonstrates that expert specialization can be used to address domain differences within computer vision rather than only in language modeling. Its limitation is that the task is image assessment rather than image generation or colorization. The proposed project extends the general concept of domain specialization to a generative colorization task. Unlike Gamma, the proposed framework does not use shared/adaptive assessment experts; instead, it trains separate colorization experts for the four domains specified in the proposal.
 
-Gamma is especially relevant because it demonstrates that expert specialization can be used to address domain differences within computer vision rather than only in language modeling. Its limitation is that the task is image assessment rather than image generation or colorization.
+\subsubsection{RS-MoEGAN: Sparse Mixture-Of-Experts for Cross-Modal Remote Sensing Image Generation}
 
-The proposed project extends the general concept of domain specialization to a generative colorization task. Unlike Gamma, the proposed framework does not use shared/adaptive assessment experts; instead, it trains separate colorization experts for the four domains specified in the proposal.
-
-\subsubsection{RS-MoEGAN: Sparse Mixture-of-Experts for Cross-Modal Remote Sensing Image Generation}
-
-Fan et al. proposed RS-MoEGAN, which applies sparse Mixture-of-Experts routing to cross-modal remote-sensing image generation \cite{ref16}. The motivation is particularly relevant to the proposed project because different land-cover types can impose conflicting requirements on image generation. RS-MoEGAN uses a learned router to assign image tokens to specialized experts.
-
-The work provides direct evidence that MoE can be useful when a generative vision problem contains conflicting domain-specific requirements. Its main limitation relative to the proposed project is the routing granularity and application domain: it uses token-level routing in remote sensing rather than semantic region-level routing for photographic colorization.
-
-The proposed project is closely related conceptually. Both approaches seek to avoid forcing a single generative model to learn conflicting visual mappings. The proposed project differs by decomposing photographic images into semantic regions and routing those regions to four explicitly defined colorization domains.
+Fan et al. proposed RS-MoEGAN, which applies sparse Mixture-of-Experts routing to cross-modal remote-sensing image generation \cite{ref16}. The motivation is particularly relevant to the proposed project because different land-cover types can impose conflicting requirements on image generation. RS-MoEGAN uses a learned router to assign image tokens to specialized experts. The work provides direct evidence that MoE can be useful when a generative vision problem contains conflicting domain-specific requirements. Its main limitation relative to the proposed project is the routing granularity and application domain: it uses token-level routing in remote sensing rather than semantic region-level routing for photographic colorization. The proposed project is closely related conceptually. Both approaches seek to avoid forcing a single generative model to learn conflicting visual mappings. The proposed project differs by decomposing photographic images into semantic regions and routing those regions to four explicitly defined colorization domains.
 
 \subsection{Semantic Region Decomposition and Routing}
 
@@ -413,25 +345,17 @@ This subsection reviews the segmentation and region-aware colorization work that
 
 \subsubsection{Grounded-SAM}
 
-Ren et al. introduced Grounded-SAM, an assembly of Grounding DINO and the Segment Anything Model that enables open-vocabulary detection and promptable segmentation \cite{ref17}. The system can identify and segment regions according to textual prompts, providing a flexible mechanism for extracting semantically meaningful regions from images.
-
-This capability is particularly suitable for the proposed architecture. The project proposal specifies predefined textual prompts such as person, animal, building, sky, and vegetation and uses the resulting masks to determine which expert should process each region.
-
-A limitation is that Grounded-SAM itself is not a colorization system. Its purpose in the proposed architecture is therefore infrastructural: it supplies the semantic decomposition required by the routing mechanism. The proposed project investigates whether this decomposition can serve as the basis for domain-specialized colorization.
+Ren et al. introduced Grounded-SAM, an assembly of Grounding DINO and the Segment Anything Model that enables open-vocabulary detection and promptable segmentation \cite{ref17}. The system can identify and segment regions according to textual prompts, providing a flexible mechanism for extracting semantically meaningful regions from images. This capability is particularly suitable for the proposed architecture. The project proposal specifies predefined textual prompts such as person, animal, building, sky, and vegetation and uses the resulting masks to determine which expert should process each region. A limitation is that Grounded-SAM itself is not a colorization system. Its purpose in the proposed architecture is therefore infrastructural: it supplies the semantic decomposition required by the routing mechanism. The proposed project investigates whether this decomposition can serve as the basis for domain-specialized colorization.
 
 \subsubsection{Instance-Aware Image Colorization}
 
-Su et al. (2020) proposed an instance-aware method for colorizing images containing multiple objects\cite{su2020instance}. A pretrained Mask R-CNN detects objects and provides bounding-box crops. One instance colorization network processes all detected crops, while a separate network processes the full image. The networks have the same architecture but different weights. A learned fusion module combines their intermediate features to predict the final colors.
-
-The authors reported improved PSNR, SSIM, and LPIPS results over the compared methods on ImageNet, COCO-Stuff, and Places205. They also found that directly blending separate object and full-image color predictions produced inconsistencies. This finding highlights the need to evaluate color consistency when combining independently processed regions.
+Su et al. (2020) proposed an instance-aware method for colorizing images containing multiple objects\cite{su2020instance}. A pretrained Mask R-CNN detects objects and provides bounding-box crops. One instance colorization network processes all detected crops, while a separate network processes the full image. The networks have the same architecture but different weights. A learned fusion module combines their intermediate features to predict the final colors. The authors reported improved PSNR, SSIM, and LPIPS results over the compared methods on ImageNet, COCO-Stuff, and Places205. They also found that directly blending separate object and full-image color predictions produced inconsistencies. This finding highlights the need to evaluate color consistency when combining independently processed regions.
 
 This work is closely related to the proposed project because both use regional processing to produce a complete color image. However, Su et al. use one instance colorization network across object types rather than separate domain experts. The proposed system will use Grounded-SAM masks to identify regions and route them to DDColor-based experts fine-tuned for people, nature, urban scenes, and animals. Their colorized outputs will be combined using soft masks. The project therefore investigates whether domain specialization improves colorization and whether new experts can be added without retraining existing ones. Object-level colorization itself is treated as established prior work.
 
 \subsection{Datasets and Evaluation Foundations}
 
-The proposal identifies several public datasets for constructing domain-specific training sets, including CelebA \cite{celeba2015}, CelebA-HQ \cite{pggan2018}, FFHQ \cite{ffhq2019}, DeepFashion-MultiModal \cite{text2human2022}, COCO \cite{ref19}, Places365 \cite{places365}, SUN397 \cite{sun397}, Cityscapes \cite{ref20}, ADE20K \cite{ref18}, AFHQ \cite{afhq2020}, and Oxford-IIIT Pets \cite{pets2012}. The proposal also specifies that grayscale training inputs are derived from the L channel of Lab-space color images and that COCO-Stuff \cite{caesar2018cocostuff} is used to evaluate region decomposition.
-
-COCO provides object-level annotations and instance segmentations in complex everyday scenes \cite{ref19}, and COCO-Stuff extends these images with pixel-level labels for background classes such as sky, grass, tree, and water \cite{caesar2018cocostuff}. Because it covers both object and background classes, COCO-Stuff is the dataset used to evaluate region decomposition and routing in this project. ADE20K contains dense scene and object annotations and provides a scene-parsing benchmark covering 150 object and stuff categories \cite{ref18}, and Cityscapes provides detailed semantic and instance annotations for urban street scenes \cite{ref20}. Both are relevant candidate sources of urban and man-made training images for FYP-2.
+The proposal identifies several public datasets for constructing domain-specific training sets, including CelebA \cite{celeba2015}, CelebA-HQ \cite{pggan2018}, FFHQ \cite{ffhq2019}, DeepFashion-MultiModal \cite{text2human2022}, COCO \cite{ref19}, Places365 \cite{places365}, SUN397 \cite{sun397}, Cityscapes \cite{ref20}, ADE20K \cite{ref18}, AFHQ \cite{afhq2020}, and Oxford-IIIT Pets \cite{pets2012}. The proposal also specifies that grayscale training inputs are derived from the L channel of Lab-space color images and that COCO-Stuff \cite{caesar2018cocostuff} is used to evaluate region decomposition. COCO provides object-level annotations and instance segmentations in complex everyday scenes \cite{ref19}, and COCO-Stuff extends these images with pixel-level labels for background classes such as sky, grass, tree, and water \cite{caesar2018cocostuff}. Because it covers both object and background classes, COCO-Stuff is the dataset used to evaluate region decomposition and routing in this project. ADE20K contains dense scene and object annotations and provides a scene-parsing benchmark covering 150 object and stuff categories \cite{ref18}, and Cityscapes provides detailed semantic and instance annotations for urban street scenes \cite{ref20}. Both are relevant candidate sources of urban and man-made training images for FYP-2.
 
 The 2025 survey by Anwar et al. provides an extensive taxonomy of colorization approaches, datasets, metrics, and evaluation protocols \cite{ref21}. It is particularly useful for the proposed project because it confirms the importance of evaluating colorization through multiple complementary measures rather than relying on a single image-quality metric.
 
@@ -507,9 +431,7 @@ This section reviews existing colorization applications and development systems 
 
 \subsection{DDColor}
 
-DDColor is an open source implementation of the ICCV 2023 dual decoder colorization architecture \cite{ref9,ref10}. The project provides pretrained models, training scripts, inference functionality, and model export support.
-
-Its principal strength is the availability of a complete research implementation and a colorization architecture explicitly designed to reduce semantic color errors and color bleeding. Its limitation relative to the proposed project is that the colorization model remains general purpose rather than consisting of separate experts for people, nature, urban and man made scenes, and animals.
+DDColor is an open source implementation of the ICCV 2023 dual decoder colorization architecture \cite{ref9,ref10}. The project provides pretrained models, training scripts, inference functionality, and model export support. Its principal strength is the availability of a complete research implementation and a colorization architecture explicitly designed to reduce semantic color errors and color bleeding. Its limitation relative to the proposed project is that the colorization model remains general purpose rather than consisting of separate experts for people, nature, urban and man made scenes, and animals.
 
 \subsection{Colorful Image Colorization}
 
@@ -517,24 +439,16 @@ The Colorful Image Colorization project provides an implementation of the ECCV 2
 
 \subsection{DeOldify}
 
-DeOldify \cite{deoldify} is an open source image and film colorization project intended for the restoration and colorization of historical images and footage. Its documentation describes both image and video colorization and emphasizes improvements in artifacts, detail, and color rendering.
-
-Its principal strength is its practical restoration capability and support for both image and video scenarios. However, video is explicitly outside the current scope of the proposed project, and DeOldify does not implement the proposed four domain semantic routing architecture. The project therefore serves as a practical general purpose comparison rather than an architectural equivalent.
+DeOldify \cite{deoldify} is an open source image and film colorization project intended for the restoration and colorization of historical images and footage. Its documentation describes both image and video colorization and emphasizes improvements in artifacts, detail, and color rendering. Its principal strength is its practical restoration capability and support for both image and video scenarios. However, video is explicitly outside the current scope of the proposed project, and DeOldify does not implement the proposed four domain semantic routing architecture. The project therefore serves as a practical general purpose comparison rather than an architectural equivalent.
 
 \subsection{DeepAI Image Colorizer}
 
-DeepAI \cite{deepai} provides an accessible image colorization application through which users can upload images and request automatic colorization.
-
-The main advantage of DeepAI Image Colorizer is its accessibility through an application interface, which removes the need for users to train or operate a research model. However, its underlying model architecture and routing strategy are not exposed sufficiently to establish the type of domain specialized processing proposed in this project. Consequently, it is useful as an application level comparison rather than as an architectural baseline.
+DeepAI \cite{deepai} provides an accessible image colorization application through which users can upload images and request automatic colorization. The main advantage of DeepAI Image Colorizer is its accessibility through an application interface, which removes the need for users to train or operate a research model. However, its underlying model architecture and routing strategy are not exposed sufficiently to establish the type of domain specialized processing proposed in this project. Consequently, it is useful as an application level comparison rather than as an architectural baseline.
 
 
 \subsection{Identification of Research and Technological Gap}
 
-The reviewed literature establishes substantial progress in automatic image colorization. CNN based methods demonstrated practical automatic color prediction, transformer approaches improved long range reasoning, generative priors improved color diversity, diffusion models introduced powerful multimodal image generation, and recent systems such as DDColor improved semantic and perceptual quality.
-
-Nevertheless, the dominant colorization formulation remains based on a single general purpose model. The proposal identifies the underlying issue as the need for one model to approximate color distributions across substantially different visual domains.
-
-Mixture of Experts research provides evidence that conflicting knowledge can be separated among specialized experts. RS-MoEGAN is particularly relevant because it uses expert routing for different visual generation requirements \cite{ref16}, while Gamma demonstrates domain aware experts in image assessment \cite{ref15}.
+The reviewed literature establishes substantial progress in automatic image colorization. CNN based methods demonstrated practical automatic color prediction, transformer approaches improved long range reasoning, generative priors improved color diversity, diffusion models introduced powerful multimodal image generation, and recent systems such as DDColor improved semantic and perceptual quality. Nevertheless, the dominant colorization formulation remains based on a single general purpose model. The proposal identifies the underlying issue as the need for one model to approximate color distributions across substantially different visual domains. Mixture of Experts research provides evidence that conflicting knowledge can be separated among specialized experts. RS-MoEGAN is particularly relevant because it uses expert routing for different visual generation requirements \cite{ref16}, while Gamma demonstrates domain aware experts in image assessment \cite{ref15}.
 
 However, the reviewed literature does not establish a directly equivalent system that combines the following components:
 
@@ -556,17 +470,13 @@ This combination represents the technological gap addressed by the proposed deve
 
 \section{Conclusion}
 
-The literature review shows that image colorization has developed from traditional and CNN based methods to transformer, GAN, diffusion, exemplar based, and controllable generative approaches. These developments have improved color richness, semantic consistency, visual quality, and diversity. However, grayscale to color mapping remains uncertain, especially when a single photograph contains several visually different domains.
-
-The reviewed Mixture of Experts research provides another useful approach in which different or conflicting types of knowledge can be handled by specialized experts and selected through a routing mechanism. Semantic segmentation systems such as Grounded-SAM provide a way to identify different image regions according to their visual and semantic characteristics.
+The literature review shows that image colorization has developed from traditional and CNN based methods to transformer, GAN, diffusion, exemplar based, and controllable generative approaches. These developments have improved color richness, semantic consistency, visual quality, and diversity. However, grayscale to color mapping remains uncertain, especially when a single photograph contains several visually different domains. The reviewed Mixture of Experts research provides another useful approach in which different or conflicting types of knowledge can be handled by specialized experts and selected through a routing mechanism. Semantic segmentation systems such as Grounded-SAM provide a way to identify different image regions according to their visual and semantic characteristics.
 
 The proposed project combines these ideas into a framework for photographic image colorization. It focuses on four domains: people, nature and landscapes, urban and man made scenes, and animals. The framework combines semantic decomposition, domain routing, specialized colorization, contextual region expansion, and soft mask blending. The evaluation framework measures segmentation, routing, individual expert quality, boundary consistency, and final image quality. The final system is intended to be a working prototype that can also support the addition of new experts without requiring the existing architecture to be redesigned.
  
 \chapter{Software Requirement Specifications}
 
-This project is a research prototype for testing domain adaptive image colorization with a Mixture of Experts framework. It is different from a normal software application because it does not need user accounts, transactions, or support for many users at the same time. Its main tasks are model training, semantic region detection, expert selection, colorization, blending, and evaluation.
-
-The system also keeps the output of each stage for inspection and debugging purposes. This is necessary because a good final image does not always mean that the segmentation and routing decisions were correct. For this reason, segmentation, routing, and blending are evaluated separately as well as through the complete result. Specialist outputs will be evaluated after domain fine-tuning in FYP-2.
+This project is a research prototype for testing domain adaptive image colorization with a Mixture of Experts framework. It is different from a normal software application because it does not need user accounts, transactions, or support for many users at the same time. Its main tasks are model training, semantic region detection, expert selection, colorization, blending, and evaluation. The system also keeps the output of each stage for inspection and debugging purposes. This is necessary because a good final image does not always mean that the segmentation and routing decisions were correct. For this reason, segmentation, routing, and blending are evaluated separately as well as through the complete result. Specialist outputs will be evaluated after domain fine-tuning in FYP-2.
 
 This chapter explains what the system must do and the conditions under which it will be developed. It covers the main features, functional and nonfunctional requirements, quality attributes, assumptions, hardware and software needs, use cases, data handling, and possible risks.
 
@@ -617,49 +527,31 @@ The following requirements describe the main operations of the system. Each one 
 
 FR1 &
 The system shall take a grayscale photograph as input. &
-A valid grayscale image is loaded without an error. \\ \hline
-
-FR2 &
+A valid grayscale image is loaded without an error. \\ \hline FR2 &
 The system shall find semantic regions using predefined prompts and Grounded SAM. &
-Masks are produced for the supported regions in the image. \\ \hline
-
-FR3 &
+Masks are produced for the supported regions in the image. \\ \hline FR3 &
 The system shall extract every selected region with a configurable context margin, defaulting to 20\% of its box width and height on each side. &
-The crop contains the detected region and some nearby image content. \\ \hline
-
-FR4 &
+The crop contains the detected region and some nearby image content. \\ \hline FR4 &
 The system shall assign each region to a suitable domain expert. &
-An expert assignment is produced for every selected region. \\ \hline
-
-FR5 &
+An expert assignment is produced for every selected region. \\ \hline FR5 &
 The system shall colorize each region through its assigned expert. &
 Every routed region produces a colorized result. \\ \hline
 
 FR6 &
 The system shall allow different experts to process the same photograph. &
-An image with multiple domains can produce results from more than one expert. \\ \hline
-
-FR7 &
+An image with multiple domains can produce results from more than one expert. \\ \hline FR7 &
 The system shall combine the expert outputs using soft mask blending. &
-The separate expert results are joined into one color image. \\ \hline
-
-FR8 &
+The separate expert results are joined into one color image. \\ \hline FR8 &
 The system shall keep every region in its original position during reconstruction. &
-Each colorized region appears in the correct place in the final image. \\ \hline
-
-FR9 &
+Each colorized region appears in the correct place in the final image. \\ \hline FR9 &
 The system shall display each detected region, its assigned expert, and its colorized output during the current session. &
-The interface shows the masks, routing decisions, and expert outputs without permanently saving them. \\ \hline
-
-FR10 &
+The interface shows the masks, routing decisions, and expert outputs without permanently saving them. \\ \hline FR10 &
 The system shall evaluate segmentation, routing, expert colorization, and the final image. &
 The required measurements are calculated and displayed for the evaluated stages. \\ \hline
 
 FR11 &
 The system shall allow a new expert and prompt set to be added without retraining existing experts. &
-The new expert works while the existing experts remain unchanged. \\ \hline
-
-FR12 &
+The new expert works while the existing experts remain unchanged. \\ \hline FR12 &
 The system shall record and discard regions whose labels cannot be routed, and send pixels left without a valid owner to the fallback expert. &
 Unassignable regions are recorded; pixels not covered by any retained region receive fallback colorization. \\ \hline
 
@@ -701,9 +593,7 @@ These requirements describe how the prototype should behave during development a
 
 \subsection{Performance}
 
-Segmentation, routing, colorization, and blending should finish within a practical amount of time on the available hardware. A strict real time target is not needed because the system is being built for experiments, not live public use.
-
-Image resolution and batch size should be adjustable so that training can be matched to the available computing power.
+Segmentation, routing, colorization, and blending should finish within a practical amount of time on the available hardware. A strict real time target is not needed because the system is being built for experiments, not live public use. Image resolution and batch size should be adjustable so that training can be matched to the available computing power.
 
 \subsection{Reusability}
 
@@ -810,23 +700,17 @@ The system must use predefined prompts and should not require manual region sele
 The operator provides a grayscale photograph.
 } &
 1 &
-The system validates and loads the input image. \\ \hline
-
-2 &
+The system validates and loads the input image. \\ \hline 2 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator starts the colorization process.
 } &
 2 &
-The system passes the image to the semantic region decomposition component. \\ \hline
-
-3 &
+The system passes the image to the semantic region decomposition component. \\ \hline 3 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator waits while semantic decomposition is performed.
 } &
 3 &
-Grounded SAM generates semantic region masks using the predefined prompts. \\ \hline
-
-4 &
+Grounded SAM generates semantic region masks using the predefined prompts. \\ \hline 4 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator waits while the detected regions are prepared.
 } &
@@ -838,23 +722,17 @@ The system extracts each selected region with a configurable margin, defaulting 
 The operator waits while routing is performed.
 } &
 5 &
-The routing component assigns each region to the appropriate domain expert. \\ \hline
-
-6 &
+The routing component assigns each region to the appropriate domain expert. \\ \hline 6 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator waits while the experts process their assigned regions.
 } &
 6 &
-Each selected expert produces a colorized version of its assigned region. \\ \hline
-
-7 &
+Each selected expert produces a colorized version of its assigned region. \\ \hline 7 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator waits while reconstruction is completed.
 } &
 7 &
-The blending component combines the expert outputs using soft region boundaries. \\ \hline
-
-8 &
+The blending component combines the expert outputs using soft region boundaries. \\ \hline 8 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator examines the generated result.
 } &
@@ -868,23 +746,17 @@ The system provides the final color image and its intermediate outputs for evalu
 The operator provides an invalid or unsupported image.
 } &
 1A &
-The system rejects the input and displays or records an appropriate error message. \\ \hline
-
-3A &
+The system rejects the input and displays or records an appropriate error message. \\ \hline 3A &
 \multicolumn{2}{p{6.2cm}|}{
 No supported semantic region is identified.
 } &
 3A &
-The system sends the whole image to the fallback expert and records that no domain region was found. \\ \hline
-
-5A &
+The system sends the whole image to the fallback expert and records that no domain region was found. \\ \hline 5A &
 \multicolumn{2}{p{6.2cm}|}{
 A region cannot be associated with a supported expert.
 } &
 5A &
-The system records and discards the unassignable region. Its pixels receive fallback colorization unless another retained region owns them. \\ \hline
-
-6A &
+The system records and discards the unassignable region. Its pixels receive fallback colorization unless another retained region owns them. \\ \hline 6A &
 \multicolumn{2}{p{6.2cm}|}{
 An expert model fails to process its assigned region.
 } &
@@ -935,30 +807,22 @@ Existing expert models must not be retrained or modified when the new expert is 
 The operator prepares a trained expert model and its configuration.
 } &
 1 &
-The system receives and validates the new expert configuration. \\ \hline
-
-2 &
+The system receives and validates the new expert configuration. \\ \hline 2 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator defines the corresponding textual prompt set.
 } &
 2 &
-The routing configuration associates the new prompts with the new expert. \\ \hline
-
-3 &
+The routing configuration associates the new prompts with the new expert. \\ \hline 3 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator starts the expert registration process.
 } &
 3 &
-The system registers the new expert and its prompt mapping. \\ \hline
-
-4 &
+The system registers the new expert and its prompt mapping. \\ \hline 4 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator verifies the existing expert configuration.
 } &
 4 &
-The system keeps all existing experts available without retraining or modification. \\ \hline
-
-5 &
+The system keeps all existing experts available without retraining or modification. \\ \hline 5 &
 \multicolumn{2}{p{6.2cm}|}{
 The operator performs a routing test using an image from the new domain.
 } &
@@ -972,16 +836,12 @@ The system routes supported regions from the new domain to the newly added exper
 The operator provides an incomplete or invalid prompt configuration.
 } &
 2A &
-The system rejects the configuration and records the validation problem. \\ \hline
-
-3A &
+The system rejects the configuration and records the validation problem. \\ \hline 3A &
 \multicolumn{2}{p{6.2cm}|}{
 The new expert is incompatible with the required input or output format.
 } &
 3A &
-The system does not register the expert and reports the compatibility issue. \\ \hline
-
-5A &
+The system does not register the expert and reports the compatibility issue. \\ \hline 5A &
 \multicolumn{2}{p{6.2cm}|}{
 The prompt set does not correctly identify the intended domain.
 } &
@@ -998,13 +858,7 @@ This section describes the hardware and software environment required to develop
 
 \subsection{Hardware Requirements}
 
-The project requires access to hardware capable of executing modern deep learning models. GPU acceleration is expected to be important for training the colorization experts and running the segmentation and colorization pipeline efficiently.
-
-The required GPU memory depends on the selected expert architecture, image resolution, and batch size. Exact memory requirements will therefore be determined through initial training experiments rather than assuming a fixed value before implementation.
-
-Adequate system memory and storage are required for maintaining training datasets, model checkpoints, generated outputs, semantic masks, and evaluation results. Smaller training batches or image resolutions may be used if hardware limitations are encountered.
-
-The recommended hardware includes:
+The project requires access to hardware capable of executing modern deep learning models. GPU acceleration is expected to be important for training the colorization experts and running the segmentation and colorization pipeline efficiently. The required GPU memory depends on the selected expert architecture, image resolution, and batch size. Exact memory requirements will therefore be determined through initial training experiments rather than assuming a fixed value before implementation. Adequate system memory and storage are required for maintaining training datasets, model checkpoints, generated outputs, semantic masks, and evaluation results. Smaller training batches or image resolutions may be used if hardware limitations are encountered. The recommended hardware includes:
 
 \begin{itemize}
     \item A CUDA compatible GPU for training and inference.
@@ -1055,9 +909,7 @@ The implemented pipeline, image processing, routing, blending, and evaluation us
 The Next.js frontend will allow the user to upload a grayscale image and view the semantic masks, assigned experts, individual expert outputs, and final colorized image. The FastAPI backend will receive the image, run the Python-based colorization pipeline, and return the generated results to the frontend. Model configurations, prompts, dataset splits, and experiment settings will also be stored to support the reproduction of important experiments.
 \section{Graphical User Interface}
 
-The project is primarily a research prototype. In FYP-1, scripts, notebooks, and the command-line interface run the Python pipeline. A standalone HTML concept demonstrates the proposed user interaction, but it is not connected to the models and simulates colorization. The Next.js frontend and FastAPI backend in the architecture (Section~\ref{sec:architecture}) remain to be integrated in FYP-2.
-
-The planned integrated web interface will provide the following functions:
+The project is primarily a research prototype. In FYP-1, scripts, notebooks, and the command-line interface run the Python pipeline. A standalone HTML concept demonstrates the proposed user interaction, but it is not connected to the models and simulates colorization. The Next.js frontend and FastAPI backend in the architecture (Section~\ref{sec:architecture}) remain to be integrated in FYP-2. The planned integrated web interface will provide the following functions:
 
 \begin{itemize}
     \item Selection or upload of a grayscale photograph.
@@ -1096,9 +948,7 @@ The proposed system does not require a conventional relational or NoSQL database
 
 \subsection{ER Diagram}
 
-An ER diagram is not required because the proposed prototype does not use a relational database. The system stores experimental artifacts as files rather than as persistent relational entities.
-
-The logical relationship between the principal experimental artifacts is that one input image may produce multiple semantic regions, each semantic region is assigned to one expert, each expert produces a colorized region, and the colorized regions are combined into one final image.
+An ER diagram is not required because the proposed prototype does not use a relational database. The system stores experimental artifacts as files rather than as persistent relational entities. The logical relationship between the principal experimental artifacts is that one input image may produce multiple semantic regions, each semantic region is assigned to one expert, each expert produces a colorized region, and the colorized regions are combined into one final image.
 
 \subsection{Data Dictionary}
 
@@ -1117,49 +967,29 @@ Table \ref{tab:data-dictionary} describes the main data artifacts maintained by 
 
 Input Image &
 PNG or JPEG &
-The grayscale photograph provided to the colorization pipeline. \\ \hline
-
-Ground Truth Image &
+The grayscale photograph provided to the colorization pipeline. \\ \hline Ground Truth Image &
 PNG or JPEG &
-The original color image used as a reference during training or evaluation. \\ \hline
-
-Semantic Mask &
+The original color image used as a reference during training or evaluation. \\ \hline Semantic Mask &
 PNG, tensor, or array &
-A mask identifying the pixels associated with a detected semantic region. \\ \hline
-
-Region Label &
+A mask identifying the pixels associated with a detected semantic region. \\ \hline Region Label &
 Text &
-The semantic concept detected using a predefined textual prompt. \\ \hline
-
-Expert Identifier &
+The semantic concept detected using a predefined textual prompt. \\ \hline Expert Identifier &
 Text or integer &
-The identifier of the expert assigned to process a semantic region. \\ \hline
-
-Contextual Crop &
+The identifier of the expert assigned to process a semantic region. \\ \hline Contextual Crop &
 Image or tensor &
-The selected region with a default margin of 20\% of its box dimensions on each side, clipped to the image. \\ \hline
-
-Expert Output &
+The selected region with a default margin of 20\% of its box dimensions on each side, clipped to the image. \\ \hline Expert Output &
 Image or tensor &
 The colorized result generated by an individual expert. \\ \hline
 
 Final Output &
 PNG or JPEG &
-The complete color image generated after soft mask blending. \\ \hline
-
-Prompt Configuration &
+The complete color image generated after soft mask blending. \\ \hline Prompt Configuration &
 JSON, YAML, or text &
-The predefined prompts and their associations with the available experts. \\ \hline
-
-Model Configuration &
+The predefined prompts and their associations with the available experts. \\ \hline Model Configuration &
 JSON or YAML &
-The architecture, training, and inference settings of an expert model. \\ \hline
-
-Model Checkpoint &
+The architecture, training, and inference settings of an expert model. \\ \hline Model Checkpoint &
 Model file &
-The learned parameters of a trained colorization expert. \\ \hline
-
-Evaluation Record &
+The learned parameters of a trained colorization expert. \\ \hline Evaluation Record &
 CSV or JSON &
 The segmentation, routing, expert, blending, and final image evaluation results. \\ \hline
 
@@ -1171,53 +1001,35 @@ The proposed system contains several connected components. A failure in an earli
 
 \subsection{Semantic Segmentation Risk}
 
-Incorrect semantic segmentation may cause image regions to be missed or incorrectly identified. Since routing depends on the generated semantic masks, segmentation errors can affect all remaining stages of the pipeline.
-
-E1 monitors this risk using segmentation mIoU, coverage, and representative visual examples; the same checks will accompany later changes.
+Incorrect semantic segmentation may cause image regions to be missed or incorrectly identified. Since routing depends on the generated semantic masks, segmentation errors can affect all remaining stages of the pipeline. E1 monitors this risk using segmentation mIoU, coverage, and representative visual examples; the same checks will accompany later changes.
 
 \subsection{Routing Risk}
 
-Some regions may contain visual characteristics associated with more than one domain. This can make expert selection difficult. Incorrect routing may cause a region to be processed by an unsuitable expert.
-
-E2 therefore evaluates routing accuracy independently using labeled test regions. Uncertain or unsupported regions should also be recorded instead of being assigned silently to an unsuitable expert.
+Some regions may contain visual characteristics associated with more than one domain. This can make expert selection difficult. Incorrect routing may cause a region to be processed by an unsuitable expert. E2 therefore evaluates routing accuracy independently using labeled test regions. Uncertain or unsupported regions should also be recorded instead of being assigned silently to an unsuitable expert.
 
 \subsection{Dataset and Expert Training Risk}
 
-The datasets available for the different domains may vary in size, quality, balance, and diversity. This may cause some experts to perform better than others and may make direct comparison difficult.
-
-Domain specific datasets will be prepared separately, and each expert will be evaluated using held out images from its own domain.
+The datasets available for the different domains may vary in size, quality, balance, and diversity. This may cause some experts to perform better than others and may make direct comparison difficult. Domain specific datasets will be prepared separately, and each expert will be evaluated using held out images from its own domain.
 
 \subsection{Blending Risk}
 
-Outputs generated by different experts may contain noticeable color differences near the region boundaries. These differences may produce visible seams when the independently colorized regions are combined.
-
-Contextual region expansion and soft-mask blending address this risk. E4 compares smoothing and binary-mask variants with shared weights; the comparison will be repeated with distinct trained experts in FYP-2.
+Outputs generated by different experts may contain noticeable color differences near the region boundaries. These differences may produce visible seams when the independently colorized regions are combined. Contextual region expansion and soft-mask blending address this risk. E4 compares smoothing and binary-mask variants with shared weights; the comparison will be repeated with distinct trained experts in FYP-2.
 
 \subsection{Computational Risk}
 
-Training multiple experts and running segmentation models may require significant computational resources. Hardware limitations may restrict the training resolution, batch size, dataset size, or number of experiments that can be completed.
-
-Initial experiments will use manageable dataset sizes and training configurations. Larger experiments will only be performed after the resource requirements have been measured.
+Training multiple experts and running segmentation models may require significant computational resources. Hardware limitations may restrict the training resolution, batch size, dataset size, or number of experiments that can be completed. Initial experiments will use manageable dataset sizes and training configurations. Larger experiments will only be performed after the resource requirements have been measured.
 
 \subsection{Dependency Risk}
 
-The project depends on external libraries, pretrained models, and frameworks such as Grounded SAM. Changes in library versions or the unavailability of model files may affect implementation and reproducibility.
-
-Required versions and dependencies will be recorded. Important pretrained weights and configuration files should be maintained with the project where their licenses permit local storage.
+The project depends on external libraries, pretrained models, and frameworks such as Grounded SAM. Changes in library versions or the unavailability of model files may affect implementation and reproducibility. Required versions and dependencies will be recorded. Important pretrained weights and configuration files should be maintained with the project where their licenses permit local storage.
 
 \subsection{Schedule Risk}
 
-Training, model tuning, and evaluation may require more time than initially expected. Failed experiments may further delay the comparison of the expert models and the complete framework.
-
-Development proceeds incrementally. FYP-1 established a small but complete pretrained pipeline and its initial evaluation. FYP-2 will build on that implementation with specialist training and broader experiments within the measured resource limits.
+Training, model tuning, and evaluation may require more time than initially expected. Failed experiments may further delay the comparison of the expert models and the complete framework. Development proceeds incrementally. FYP-1 established a small but complete pretrained pipeline and its initial evaluation. FYP-2 will build on that implementation with specialist training and broader experiments within the measured resource limits.
 
 \section{Conclusion}
 
-This chapter defined the requirements of the proposed research oriented image colorization prototype. The main functional requirements cover semantic region decomposition, contextual region extraction, expert routing, domain specific colorization, soft mask blending, evaluation, and expert extensibility.
-
-The quality requirements focus on correctness, modularity, reproducibility, evaluability, maintainability, and resource awareness. The assumptions define the datasets, pretrained components, and scope required for the initial implementation. The hardware and software requirements describe the environment needed to conduct the experiments, while the interface and data organization sections explain how the prototype will be operated and how its experimental outputs will be maintained.
-
-The identified risks demonstrate that the final performance of the system depends on several connected stages. For this reason, FYP-1 evaluates decomposition, routing, pretrained baselines, and pipeline blending separately. Domain-specialist evaluation remains for FYP-2. These requirements provide the basis for the implementation and experiments documented in Chapters~\ref{ch:implementation} and~\ref{ch:results}, and for the remaining FYP-2 work.
+This chapter defined the requirements of the proposed research oriented image colorization prototype. The main functional requirements cover semantic region decomposition, contextual region extraction, expert routing, domain specific colorization, soft mask blending, evaluation, and expert extensibility. The quality requirements focus on correctness, modularity, reproducibility, evaluability, maintainability, and resource awareness. The assumptions define the datasets, pretrained components, and scope required for the initial implementation. The hardware and software requirements describe the environment needed to conduct the experiments, while the interface and data organization sections explain how the prototype will be operated and how its experimental outputs will be maintained. The identified risks demonstrate that the final performance of the system depends on several connected stages. For this reason, FYP-1 evaluates decomposition, routing, pretrained baselines, and pipeline blending separately. Domain-specialist evaluation remains for FYP-2. These requirements provide the basis for the implementation and experiments documented in Chapters~\ref{ch:implementation} and~\ref{ch:results}, and for the remaining FYP-2 work.
 
 \chapter{Proposed Approach and Methodology}
 \label{ch:method}
@@ -1233,17 +1045,17 @@ The pipeline consists of five stages, shown in
 Figure~\ref{fig:pipeline-overview}.
 
 \begin{enumerate}
-    \item \textbf{Region decomposition.} Grounded-SAM~\cite{ref17} uses a
+    \item Region decomposition. Grounded-SAM~\cite{ref17} uses a
           predefined set of text prompts to detect regions and generate
           their masks.
 
-    \item \textbf{Expert routing.} The router uses each detected region's
+    \item Expert routing. The router uses each detected region's
           label to assign it to one of four domains: portraits and people,
           nature and landscapes, urban and man-made scenes, or animals.
           Pixels left without an owner form the fallback region
           (Section~\ref{sec:fallback}).
 
-    \item \textbf{Context-aware region extraction.} The extractor expands
+    \item Context-aware region extraction. The extractor expands
           each stored bounding box to include nearby context, clips it to
           the image boundaries, and resizes the crop to the expert's input
           size. The default margin adds $20\%$ of the box width on each
@@ -1252,12 +1064,12 @@ Figure~\ref{fig:pipeline-overview}.
           cropping procedure to the fallback region
           (Section~\ref{sec:extraction}).
 
-    \item \textbf{Expert colorization.} The assigned expert predicts the
+    \item Expert colorization. The assigned expert predicts the
           $a$ and $b$ color channels for each crop. The predictions are
           resized back to the crop dimensions and placed on a canvas at
           the working image resolution.
 
-    \item \textbf{Blending and reconstruction.} The pipeline combines the
+    \item Blending and reconstruction. The pipeline combines the
           regional and fallback predictions using mask weights. Soft
           masks allow colors to transition gradually where regions meet.
           The blended color channels are then combined with grayscale
@@ -1370,7 +1182,7 @@ Three situations require handling after segmentation. Different prompts can prod
 
 After decomposition, each retained region is assigned to the slot that will colorize it. Routing is a fixed lookup from the region label to a domain. No router network is trained; detection and segmentation use frozen pretrained models, and domain-expert fine-tuning remains for FYP-2. Routing quality therefore depends on the detector's labels and the mapping together, which is what the E2 routing accuracy measures (Section~\ref{sec:evaluation}).
 
-\subsection{Label-to-Domain Mapping}
+\subsection{Label-To-Domain Mapping}
 
 Every prompt in the domain prompt set belongs to exactly one domain, so the label of a region (the prompt that produced it) determines its expert. Table~\ref{tab:routing} gives the mapping for the prompt set used in the prototype. Extending the framework to a new domain adds rows to this table (Section~\ref{sec:extensibility}).
 
@@ -1419,9 +1231,7 @@ with ties broken by the higher detection score. Smaller regions are usually obje
 Some pixels belong to no region because no prompt matched them, a detection was
 filtered out, or its label could not be routed. The fallback is represented as
 region $k=0$. Its binary mask contains the pixels with no owner after routing,
-and its expert uses the pretrained DDColor-T checkpoint.
-
-The fallback therefore runs whenever at least one pixel is uncovered. In the E1
+and its expert uses the pretrained DDColor-T checkpoint. The fallback therefore runs whenever at least one pixel is uncovered. In the E1
 test set this was true for all 500 images, so in practice every image receives
 some fallback colorization. At 0.427 coverage, the fallback handled 0.573 of the
 evaluated pixels, so the share of each image colorized by the domain experts
@@ -1431,9 +1241,7 @@ In E4, the runner draws a bounding box around the uncovered pixels and applies
 the same contextual cropping procedure used for routed regions. If no regions
 are routed, the fallback mask and crop cover the whole working image. The runner
 computes a fallback prediction for each tested crop margin, even when the
-fallback mask is empty. An empty mask is assigned a whole-image box.
-
-In mask mode, the fallback contributes through its uncovered-pixel mask.
+fallback mask is empty. An empty mask is assigned a whole-image box. In mask mode, the fallback contributes through its uncovered-pixel mask.
 Soft blending can extend its contribution into neighboring pixels within the
 crop. The fallback prediction is included as $k=0$ in the weighted combination
 in Section~\ref{sec:blending}.
@@ -1471,9 +1279,7 @@ margin ablation described in Section~\ref{sec:evaluation}.
 
 The extractor resizes the lightness of each rectangular crop to $S\times S$
 using bicubic interpolation, where $S$ is the expert's input size. The
-expert predicts the chrominance at that size.
-
-The expert sees the entire crop, including its margin, so it can use
+expert predicts the chrominance at that size. The expert sees the entire crop, including its margin, so it can use
 neighboring pixels as context. The region mask is applied during
 reconstruction, after the prediction has been mapped back to the working
 image (Section~\ref{sec:placement}). When soft blending is enabled, the
@@ -1507,9 +1313,7 @@ multi-scale features from the grayscale input, and its pixel decoder
 restores spatial resolution. Its color decoder uses a transformer with
 learnable color queries that attend to the image features. The outputs of
 the two decoders are fused to predict the $a$ and $b$ channels of the Lab
-color space, following the formulation in Section~\ref{sec:overview}.
-
-The framework uses DDColor-T with a ConvNeXt-T backbone and 55.0 million
+color space, following the formulation in Section~\ref{sec:overview}. The framework uses DDColor-T with a ConvNeXt-T backbone and 55.0 million
 parameters~\cite{ref9,ref10}. The four proposed independently fine-tuned
 models would total approximately 220 million parameters. This is close to
 the 227.9 million parameters of the largest published variant, allowing
@@ -1561,9 +1365,7 @@ Each expert will be fine-tuned from the pretrained DDColor-T checkpoint
 using the released DDColor training code and the training images for its
 domain (Table~\ref{tab:datasets}). Training images will be converted to
 Lab and resized to $S\times S$. The $L$ channel will provide the lightness
-input and the $a$ and $b$ channels will provide the chrominance targets.
-
-Fine-tuning will use the original objective, which combines pixel-level,
+input and the $a$ and $b$ channels will provide the chrominance targets. Fine-tuning will use the original objective, which combines pixel-level,
 perceptual, adversarial, and colorfulness losses. The four experts will be
 fine-tuned separately with identical settings so that the training data
 are the main difference between them. Validation images will be used to
@@ -1684,9 +1486,7 @@ The first and last steps are changes to configuration and do not alter the decom
 
 \subsection{Independence of Existing Experts}
 
-The target design stores independently fine-tuned experts in separate checkpoints (Section~\ref{sec:experts}). FYP-1 instead registers the same pretrained checkpoint for every slot; it does not yet demonstrate trained specialist independence. Adding an expert therefore leaves the checkpoints of the existing experts untouched, and this can be verified directly by comparing checksums of the checkpoint files before and after the addition.
-
-Two indirect effects on the existing domains remain possible, and neither involves a change to an expert. First, all prompts are given to the detector as one text string (Section~\ref{sec:decomposition}), so adding prompts changes that string, which may change the detections obtained for the existing prompts. Second, regions of the new domain can overlap regions of existing domains, and the overlap rule (Section~\ref{sec:overlap}) can then assign some pixels to a different owner than before. The FYP-2 extensibility test will measure these effects and changes in blending contributions from the added expert (Section~\ref{sec:evaluation}), by comparing the regions and the final colorization of images from the existing domains before and after the new expert is added.
+The target design stores independently fine-tuned experts in separate checkpoints (Section~\ref{sec:experts}). FYP-1 instead registers the same pretrained checkpoint for every slot; it does not yet demonstrate trained specialist independence. Adding an expert therefore leaves the checkpoints of the existing experts untouched, and this can be verified directly by comparing checksums of the checkpoint files before and after the addition. Two indirect effects on the existing domains remain possible, and neither involves a change to an expert. First, all prompts are given to the detector as one text string (Section~\ref{sec:decomposition}), so adding prompts changes that string, which may change the detections obtained for the existing prompts. Second, regions of the new domain can overlap regions of existing domains, and the overlap rule (Section~\ref{sec:overlap}) can then assign some pixels to a different owner than before. The FYP-2 extensibility test will measure these effects and changes in blending contributions from the added expert (Section~\ref{sec:evaluation}), by comparing the regions and the final colorization of images from the existing domains before and after the new expert is added.
 
 % Preamble: set the fifth-expert domain once, for example \newcommand{\newdomain}{food}
 \newcommand{\newdomain}{[new domain]}
@@ -1753,9 +1553,7 @@ E4 compares the default soft-blending configuration with a variant that
 disables Gaussian smoothing. Both variants use the same normalized
 combination of regional predictions. When smoothing is disabled, the
 blender uses binary masks restricted to their crops. If two binary masks
-overlap, their predictions are averaged at the overlapping pixels.
-
-The comparison uses the same 100 images for every condition. E4 reports boundary $\Delta E_{00}$, Lab $\Delta E_{00}$, LPIPS, PSNR, SSIM, and colorfulness. Boundary $\Delta E_{00}$ is the mean CIEDE2000 output-to-reference error on reference-image edges detected with Sobel after Gaussian smoothing ($\sigma=2$), as described in Chapter~\ref{ch:results}. It is a reference-edge fidelity measure, not a direct measurement of discontinuities across segmentation seams. Visual inspection is needed alongside this score when discussing seams. FID belongs to the broader protocol but is not reported for E4.
+overlap, their predictions are averaged at the overlapping pixels. The comparison uses the same 100 images for every condition. E4 reports boundary $\Delta E_{00}$, Lab $\Delta E_{00}$, LPIPS, PSNR, SSIM, and colorfulness. Boundary $\Delta E_{00}$ is the mean CIEDE2000 output-to-reference error on reference-image edges detected with Sobel after Gaussian smoothing ($\sigma=2$), as described in Chapter~\ref{ch:results}. It is a reference-edge fidelity measure, not a direct measurement of discontinuities across segmentation seams. Visual inspection is needed alongside this score when discussing seams. FID belongs to the broader protocol but is not reported for E4.
 
 \subsection{Baselines and Ablations}
 
@@ -1763,19 +1561,16 @@ E4 compares the regional pipeline with pretrained DDColor-T applied to
 the whole image on the same 100 inputs. All four domain expert slots and
 the fallback in the regional pipeline use the same pretrained DDColor-T
 checkpoint. This comparison therefore measures the effects of regional
-processing and reconstruction with the model weights held fixed.
-
-The broader evaluation protocol includes two additional comparisons:
+processing and reconstruction with the model weights held fixed. The broader evaluation protocol includes two additional comparisons:
 
 \begin{enumerate}
-    \item \textbf{DDColor-T fine-tuned on pooled data.} A single model
+    \item DDColor-T fine-tuned on pooled data. A single model
           will be fine-tuned on the combined training images from the
           four domains. Comparing it with independently fine-tuned
           domain experts will help separate the effect of specialization
           from the effect of fine-tuning.
 
-    \item \textbf{Pretrained DDColor-L applied to the whole image.}
-          This model provides a separate generalist comparison. Its
+    \item Pretrained DDColor-L applied to the whole image. This model provides a separate generalist comparison. Its
           227.9 million parameters are close to the approximately
           220 million parameters of the four proposed domain experts.
 \end{enumerate}
@@ -1843,9 +1638,7 @@ This section gives an overview of the system. It describes the purpose and funct
 
 \subsection{Purpose and Functionality}
 
-The working prototype converts a grayscale photograph into a color image through semantic decomposition, routing, contextual crop prediction, and blending. The architecture assigns each region to a domain slot. These slots currently share pretrained DDColor-T weights; their replacement by independently trained specialists is planned for FYP-2. The design below also includes the intended web integration, whose implementation status is stated separately in Chapter~\ref{ch:implementation}.
-
-At run time, the system performs the following functions:
+The working prototype converts a grayscale photograph into a color image through semantic decomposition, routing, contextual crop prediction, and blending. The architecture assigns each region to a domain slot. These slots currently share pretrained DDColor-T weights; their replacement by independently trained specialists is planned for FYP-2. The design below also includes the intended web integration, whose implementation status is stated separately in Chapter~\ref{ch:implementation}. At run time, the system performs the following functions:
 
 \begin{itemize}
     \item Region decomposition: detects and segments the regions of the image that belong to the supported domains.
@@ -1856,9 +1649,7 @@ At run time, the system performs the following functions:
     \item User interaction (planned integration): will let the user upload a photograph through a Next.js frontend and FastAPI backend and view actual pipeline results. FYP-1 runs inference through scripts, notebooks, and the CLI.
 \end{itemize}
 
-Two further functions take place outside this path. Domain-expert training is planned as offline FYP-2 work, while the implemented pipeline is evaluated against pretrained baselines with the metrics of Section~\ref{sec:evaluation}. The system is also designed so that a new expert can be added as an extension (Section~\ref{sec:extensibility}).
-
-The scope of the system is photographic colorization of still images. It does not provide manual control over the colors of individual objects, and extension to video and medical imagery is outside the present work.
+Two further functions take place outside this path. Domain-expert training is planned as offline FYP-2 work, while the implemented pipeline is evaluated against pretrained baselines with the metrics of Section~\ref{sec:evaluation}. The system is also designed so that a new expert can be added as an extension (Section~\ref{sec:extensibility}). The scope of the system is photographic colorization of still images. It does not provide manual control over the colors of individual objects, and extension to video and medical imagery is outside the present work.
 
 \subsection{Basic Design Approach}
 
@@ -1887,11 +1678,7 @@ Three decisions define the design. First, domain experts are the only models int
 
 \subsection{Inputs, Outputs, and Users}
 
-The implemented pipeline accepts grayscale image files through scripts, notebooks, and the CLI and returns a colorized image. Prompts are predefined, so users need not supply them. The proposed integrated interface will expose upload, inference, and saving to end users in FYP-2. Evaluation uses original color photographs as references; the E4 grayscale/lightness preprocessing is described in Section~\ref{sec:b_colorization}.
-
-The output is a color image of the same size as the input.
-
-The planned integrated interface is deliberately minimal: image upload, a way to start colorization, and display of the actual model result. The present HTML concept only demonstrates this interaction. It offers no manual control over the colors or regions of the image. The intended users are people who want to colorize a photograph, and they need no knowledge of the underlying models.
+The implemented pipeline accepts grayscale image files through scripts, notebooks, and the CLI and returns a colorized image. Prompts are predefined, so users need not supply them. The proposed integrated interface will expose upload, inference, and saving to end users in FYP-2. Evaluation uses original color photographs as references; the E4 grayscale/lightness preprocessing is described in Section~\ref{sec:b_colorization}. The output is a color image of the same size as the input. The planned integrated interface is deliberately minimal: image upload, a way to start colorization, and display of the actual model result. The present HTML concept only demonstrates this interaction. It offers no manual control over the colors or regions of the image. The intended users are people who want to colorize a photograph, and they need no knowledge of the underlying models.
 
 
 \section{Design Considerations}
@@ -1977,9 +1764,7 @@ The run-time part consists of the following components.
     \item Blending and Reconstruction: merges regional predictions and combines them with supplied grayscale lightness.
 \end{itemize}
 
-The offline part includes implemented evaluation tooling and the planned FYP-2 training subsystem. FYP-1 measures pretrained baselines and pipeline ablations; it does not fine-tune domain experts.
-
-The system depends on three pretrained models that it does not modify: Grounding DINO and the Segment Anything Model, used by Region Decomposition, and the DDColor-T checkpoint, which is the starting point of the experts and the fallback expert. The domain datasets are used only by the offline part. Besides these, the subsystems read the domain definitions (the prompt set and the label-to-domain mapping) and the numerical parameters of the method. The subsystems are connected through the data they exchange, which is summarized in Table~\ref{tab:interfaces}.
+The offline part includes implemented evaluation tooling and the planned FYP-2 training subsystem. FYP-1 measures pretrained baselines and pipeline ablations; it does not fine-tune domain experts. The system depends on three pretrained models that it does not modify: Grounding DINO and the Segment Anything Model, used by Region Decomposition, and the DDColor-T checkpoint, which is the starting point of the experts and the fallback expert. The domain datasets are used only by the offline part. Besides these, the subsystems read the domain definitions (the prompt set and the label-to-domain mapping) and the numerical parameters of the method. The subsystems are connected through the data they exchange, which is summarized in Table~\ref{tab:interfaces}.
 
 \begin{table}[htbp]
     \centering
@@ -2104,7 +1889,7 @@ This section describes the main decisions that shaped the architecture, the reas
 
 The system is a sequence of stages, and the Pipeline Controller is the only component that calls them (Section~\ref{sec:architecture}). Each stage receives its input from the controller and returns its output to it, and no stage calls another. The controller keeps the original dimensions, supplied grayscale lightness, and size-limit scale factor needed for reconstruction. E4 reconstructs from working lightness rather than an untouched original-resolution Lab channel. The alternative is a chain in which each stage calls the next. It would tie every stage to its successor, so replacing or testing one stage would require the others, and the original image would have to be passed through stages that do not use it. A message-based design with queues between the stages was not considered necessary for a prototype that processes one image at a time.
 
-\subsection{Separation of the User Interface from the Pipeline}
+\subsection{Separation of the User Interface From the Pipeline}
 
 In the integrated design, the web interface sends an image to the controller and displays the returned prediction; model processing remains in Python. This separation allows scripts and the CLI to evaluate the pipeline without a server. The current HTML demonstration uses a client-side visual filter only as a placeholder and is not an alternative implementation of model inference.
 
@@ -2570,12 +2355,12 @@ ID loading priority: explicit \texttt{--id-list} > \texttt{e3\_ids.json} > built
 The design (Section~\ref{sec:extensibility}) requires adding a new expert without retraining existing ones. The implementation provides prompt, mapping, and registry entries for the extension. The following procedure describes the planned trained-expert demonstration, which remains for FYP-2:
 
 \begin{enumerate}
-    \item \textbf{Prompts}: Add the new domain's text prompts to \texttt{DecompConfig.prompts} (a dictionary in \texttt{colorize/config.py}). No code changes.
-    \item \textbf{Label-to-domain mapping}: Extend the routing lookup table in \texttt{colorize/routing.py} with the new prompts $\to$ domain entry.
-    \item \textbf{Expert training}: Fine-tune a new DDColor-T checkpoint on the new domain's dataset. This is independent of existing experts.
-    \item \textbf{Expert Registry}: Add the new checkpoint path to the \texttt{ExpertRegistry} (a dictionary mapping domain $\to$ checkpoint). The CLI (\texttt{main.py}) and E4 runner (\texttt{experiments/e4.py}) read this registry at runtime.
-    \item \textbf{Verification}: Compare checksums of the four existing checkpoints before and after the addition to confirm they are unchanged.
-    \item \textbf{Extensibility test}: Run the pipeline on existing-domain images before and after the addition. Measure IoU of region masks and FID/LPIPS of final outputs. Check whether changed detections, ownership, and blending contributions affect existing-domain outputs while their expert weights remain fixed (Section~\ref{sec:extensibility}).
+    \item Add the new domain's text prompts to \texttt{DecompConfig.prompts} (a dictionary in \texttt{colorize/config.py}). No code changes.
+    \item Extend the routing lookup table in \texttt{colorize/routing.py} with the new prompts $\to$ domain entry.
+    \item Fine-tune a new DDColor-T checkpoint on the new domain's dataset. This is independent of existing experts.
+    \item Add the new checkpoint path to the \texttt{ExpertRegistry} (a dictionary mapping domain $\to$ checkpoint). The CLI (\texttt{main.py}) and E4 runner (\texttt{experiments/e4.py}) read this registry at runtime.
+    \item Compare checksums of the four existing checkpoints before and after the addition to confirm they are unchanged.
+    \item Run the pipeline on existing-domain images before and after the addition. Measure IoU of region masks and FID/LPIPS of final outputs. Check whether changed detections, ownership, and blending contributions affect existing-domain outputs while their expert weights remain fixed (Section~\ref{sec:extensibility}).
 \end{enumerate}
 The procedure is intended to leave existing checkpoints and stage algorithms unchanged, although prompts can affect detections and overlaps. Current tests cover routing configuration only; adding and evaluating a trained expert has not been validated by the suite.
 
@@ -2612,9 +2397,7 @@ LPIPS & perceptual distance; lower is better & Optional learned feature distance
 \end{tabular}
 \end{table}
 
-E2 routing accuracy is computed separately as the fraction of scored regions whose assigned domain matches the dominant ground-truth domain (Section~\ref{sec:e2-routing}); it is not the pixel-routing helper above.
-
-The image-comparison metrics validate RGB type and shape, and reject images
+E2 routing accuracy is computed separately as the fraction of scored regions whose assigned domain matches the dominant ground-truth domain (Section~\ref{sec:e2-routing}); it is not the pixel-routing helper above. The image-comparison metrics validate RGB type and shape, and reject images
 whose dimensions do not match. Lab color difference and boundary color
 difference require scikit-image. FID requires SciPy. LPIPS is optional and
 depends on its learned-feature packages and model availability. These
@@ -2645,11 +2428,11 @@ among images; they are not confidence intervals.
 \paragraph{Implementation details.}
 The evaluation tooling is organized into four modules covering metrics, fixed test sets, CSV result handling, and plotting. Key implementation points:
 \begin{itemize}
-    \item \textbf{Metrics}: Image-comparison functions validate RGB shape and type and use NumPy and scikit-image where required. Colorfulness uses the Hasler--S\"usstrunk statistic on one output image. FID compares feature distributions using SciPy's \texttt{sqrtm}, while LPIPS uses PyTorch and its learned-feature package. These measures therefore have different inputs and dependencies; they are not all pure NumPy comparisons of two RGB arrays.
-    \item \textbf{Fixed test sets}: Constant lists of COCO val2017 image IDs (20 per domain + 20 mixed) are defined. A path constructor builds the zero-padded 12-digit JPEG path. An annotation validator loads the COCO annotations JSON, checks that every ID exists, that domain images have at least one annotation in the expected category group, and that sets are disjoint. It writes a JSON manifest with per-image metadata.
-    \item \textbf{CSV result handling}: A record schema (experiment, condition, image\_id, metric, value) is defined with append-only writes. Resumability is achieved by reading existing records and skipping completed \texttt{(image\_id, condition)} pairs. Aggregate summaries compute count, mean, std per \texttt{(experiment, condition, metric)}.
-    \item \textbf{Plotting}: Helpers provide metric comparison plots, ablation curves, and example grids using Matplotlib with Agg backend (headless). Figures are saved as PNG at 160 DPI.
-    \item \textbf{Dependencies}: Core metrics (PSNR, SSIM, Lab $\Delta E$, Colorfulness, mIoU, Coverage, Routing accuracy) require only NumPy/SciPy/scikit-image. FID adds SciPy. LPIPS adds PyTorch + \texttt{lpips} package. Real-data COCO validation adds the COCO annotations JSON. Optional dependencies are imported lazily with graceful degradation.
+    \item Image-comparison functions validate RGB shape and type and use NumPy and scikit-image where required. Colorfulness uses the Hasler--S\"usstrunk statistic on one output image. FID compares feature distributions using SciPy's \texttt{sqrtm}, while LPIPS uses PyTorch and its learned-feature package. These measures therefore have different inputs and dependencies; they are not all pure NumPy comparisons of two RGB arrays.
+    \item Constant lists of COCO val2017 image IDs (20 per domain + 20 mixed) are defined. A path constructor builds the zero-padded 12-digit JPEG path. An annotation validator loads the COCO annotations JSON, checks that every ID exists, that domain images have at least one annotation in the expected category group, and that sets are disjoint. It writes a JSON manifest with per-image metadata.
+    \item A record schema (experiment, condition, image\_id, metric, value) is defined with append-only writes. Resumability is achieved by reading existing records and skipping completed \texttt{(image\_id, condition)} pairs. Aggregate summaries compute count, mean, std per \texttt{(experiment, condition, metric)}.
+    \item Helpers provide metric comparison plots, ablation curves, and example grids using Matplotlib with Agg backend (headless). Figures are saved as PNG at 160 DPI.
+    \item Core metrics (PSNR, SSIM, Lab $\Delta E$, Colorfulness, mIoU, Coverage, Routing accuracy) require only NumPy/SciPy/scikit-image. FID adds SciPy. LPIPS adds PyTorch + \texttt{lpips} package. Real-data COCO validation adds the COCO annotations JSON. Optional dependencies are imported lazily with graceful degradation.
 \end{itemize}
 
 \paragraph{Implementation status.}
@@ -2660,7 +2443,7 @@ or the full COCO dataset. E3 results supplied with this report were produced
 with pretrained DDColor-T inference; they are evaluation results, not evidence
 that the colorization model was trained by this project. Optional LPIPS and
 real-data validation require their respective external dependencies and data.
-\subsection{Status against the Design}
+\subsection{Status Against the Design}
 \label{status}
 
 The evaluation metrics, fixed-set loader, COCO annotation validator, CSV
@@ -2677,7 +2460,7 @@ optional and depends on its external packages and feature model. The real-data
 COCO guard also remains conditional on access to the COCO annotations and
 images.
 \iffalse
-\section{Test case Design and description}
+\section{Test Case Design and Description}
 This section presents the test cases for all implemented components. The test suite comprises 178 automated tests covering decomposition, routing, extraction, colorization wrapper, blending, E4 pipeline ablations, evaluation metrics, plotting, test sets, baseline experiments, test-ID generation, and end-to-end integration. Tests use synthetic data and model stand-ins, requiring no GPU or model weights. Representative cases are given in the full QA template format below; the complete list is summarized in Table~\ref{tab:a_test_summary}.
 
 The tests are organized around observable input-output behavior. Metric tests
@@ -2960,7 +2743,7 @@ The following test cases are presented in the full QA template format as represe
 \end{longtable}
 }
 
-\subsubsection{End-to-End Integration}
+\subsubsection{End-To-End Integration}
 
 
 {\small
@@ -3715,9 +3498,7 @@ uncovered area. Most E1 errors were missed pixels rather than pixels assigned
 to a wrong group. E2 correctly routed 1,886 of 2,046 scored regions, giving
 0.922 overall accuracy; the unweighted mean of the four domain accuracies was
 0.817. Routing was strongest for people and nature and weaker for animals and
-urban regions.
-
-These results explain how early-stage errors can affect later colorization.
+urban regions. These results explain how early-stage errors can affect later colorization.
 A missed or incomplete region cannot provide the intended content to its
 expert slot, while a wrong route selects a mismatched slot. Blending may
 soften transitions but cannot recover missing coverage or repair an incorrect
@@ -3742,9 +3523,7 @@ E1 showed that the decomposition stage works where it produces regions, but
 that its coverage is limited: 0.624 group mIoU and 0.427 pooled coverage, so
 more than half of all pixels fall back to the default expert. E2 showed that
 routing is accurate overall (0.922) but uneven, with people and nature above
-0.92 and animals and urban scenes between 0.66 and 0.68.
-
-E3 established the whole-image reference points: DDColor-T gave PSNR 22.56 dB
+0.92 and animals and urban scenes between 0.66 and 0.68. E3 established the whole-image reference points: DDColor-T gave PSNR 22.56 dB
 and SSIM 0.911 across the 100 images. DDColor-L was stronger on PSNR and LPIPS in all five sets, and on Lab $\Delta E_{00}$ and FID in four of five; SSIM favored different models by set.
 
 E4 showed that the full pipeline with identical experts is competitive with
@@ -3752,9 +3531,7 @@ whole-image DDColor-T. The default configuration is better on PSNR, Lab
 $\Delta E_{00}$ and boundary $\Delta E_{00}$, slightly worse on SSIM and
 LPIPS, and lower in colorfulness. Margin 0.2 gave the best PSNR among the
 tested margins, and soft blending, 20 px smoothing and bounding-box regions
-were the best tested choices for their respective components.
-
-The main limitations are the fallback-dominated coverage, the weaker routing
+were the best tested choices for their respective components. The main limitations are the fallback-dominated coverage, the weaker routing
 for animals and urban content, and the small sets of 20 images per domain or mixed group in E3/E4. The E3 FID estimates are preliminary; E4 reports no FID. The results establish that the
 pipeline runs end to end and is competitive with a whole-image baseline, with metric-specific trade-offs. They do not establish a benefit from separately trained domain
 experts, because all slots shared one checkpoint. That question requires the
@@ -3907,9 +3684,9 @@ This chapter will be added in FYP-II. Give proper analysis and discussion of exp
 
 
 \chapter{Conclusions}
-\section{aa}
-\subsection{dfs}
-\subsubsection{dsd}
+\section{Aa}
+\subsection{Dfs}
+\subsubsection{Dsd}
 {\bf This chapter is mandatory}.  
 Give conclusions and summary of the work done.  What were your findings and what were the results?  Discuss in detail whether the scope of your project was entirely covered or not and whether the objectives of the project were met or not.  What challenges did you face and what has been left out and why.\\
 Sum up all the conclusions of all the chapters here to make a final conclusion chapter.  Do not repeat any text, just summarize it in different words. Give recommendations for future work also.\\
@@ -3926,7 +3703,7 @@ Sum up all the conclusions of all the chapters here to make a final conclusion c
 
 %ADD APPENDICES IF REQUIRED OTHERWISE COMMENT IT OUT
 \appendix
-\chapter{First Appendix if Required}
+\chapter{First Appendix If Required}
 If you want to add appendices then make sure you provide a proper title.  Add different appendices by using the chapter command as shown for this one.  They will automatically be added to the table of contents.
 
 \section{References}
@@ -4000,13 +3777,9 @@ If you need to add C++, Java or any other programming language's code, then you 
 #include <stdio.h>
 #define N 10
 /* Block
- * comment */
-
-int main()
+ * comment */ int main()
 {
-    int i;
-
-    // Line comment.
+    int i; // Line comment.
     puts("Hello world!");
     
     for (i = 0; i < N; i++)
