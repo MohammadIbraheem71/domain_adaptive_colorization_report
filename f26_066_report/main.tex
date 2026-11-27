@@ -283,33 +283,33 @@ This subsection reviews the foundational deep-learning approaches to automatic i
 
 Zhang, Isola, and Efros introduced a fully automatic deep-learning approach to grayscale image colorization by treating color prediction as a classification problem rather than straightforward deterministic regression \cite{ref1}. Their approach used a large-scale collection of color images and class rebalancing to address the tendency of colorization models to produce desaturated results. The work demonstrated that the inherent uncertainty of grayscale-to-color mapping should be explicitly considered because multiple plausible colors can correspond to the same luminance information. The authors also introduced a human evaluation in which generated images were compared with ground-truth photographs.
 
-A major strength of this work is that it shows colorization is not a simple task because there can be many possible colors for the same grayscale image. Treating colorization as a prediction problem helped later studies focus on producing more varied and realistic colors. However, it is still a general-purpose model and does not divide the image into different semantic regions or use specialized models for them.
+The paper shows why grayscale input has several valid color outputs: the same brightness can come from different colors. That view pushed later work toward more varied and realistic colors. The model is general-purpose. It does not split an image into semantic regions or assign those regions to specialized models.
 
-The relationship to the proposed project is important because the proposed system also treats grayscale-to-color mapping as an uncertain prediction task. However, instead of using one general model, it uses multiple specialized experts to handle different image regions. This allows the system to better handle the different types of content found in an image.
+This project treats grayscale-to-color mapping as uncertain in the same way. The framework uses several specialized experts for different image regions instead of one general model. That lets the pipeline handle different types of content in one photograph.
 
 \subsubsection{Let There Be Color!: Joint End-to-End Learning of Global and Local Image Priors}
 
 Iizuka, Simo-Serra, and Ishikawa proposed a colorization method that combines global scene information with local image information \cite{ref2}. The method uses the overall scene to help decide suitable colors, while local information helps produce detailed color predictions.
 
-A key strength of this approach is that it combines scene understanding with local color prediction. This is useful because individual pixels usually do not contain enough information to determine their correct color. However, both types of information are handled within one colorization model rather than through separate domain-specific experts.
+The method combines scene information with local color prediction. A single pixel usually does not carry enough information to fix its color, so both kinds of context matter. The model handles both kinds of context itself. It does not use separate domain-specific experts.
 
-The proposed framework extends this idea by first identifying meaningful image regions and then including additional context around them. The approximately 20\% (variable to allow for testing) extra region boundary would help preserve surrounding information while allowing specialized experts to process individual regions.
+The framework starts by finding meaningful image regions and then adds context around each one. The extra boundary, about 20\% and variable in testing, is meant to preserve surrounding information while a specialized expert processes the region.
 
 \subsubsection{Real-Time User-Guided Image Colorization with Learned Deep Priors}
 
 Zhang et al. developed a user-guided colorization system where users provide a small number of color hints that are then spread across the image using a CNN-based model \cite{ref3}. Instead of depending only on automatically predicted colors, the system allows users to give local color information to guide the colorization process. The method also suggests possible colors and uses learned semantic information to apply the user\textquotesingle s guidance to relevant areas.
 
-The main strength of this approach is the control it gives to the user. Users can adjust or guide the colors of uncertain regions instead of relying completely on automatic predictions. However, the system depends on user-provided color hints, while the proposed project uses predefined prompts and automatic region decomposition without requiring manual input from the user.
+The method gives the user control. Users can guide uncertain regions instead of accepting the automatic result. The method needs color hints from the user. This project uses predefined prompts and automatic region decomposition, so the user does not provide hints.
 
-This work is relevant because it shows one way of dealing with uncertainty in image colorization. The proposed framework follows a different approach: instead of relying on the user to handle uncertain regions, it uses semantic routing and domain-specialized experts to deal with differences between image domains.
+The paper shows one way to handle uncertainty. The framework uses semantic routing and domain-specialized experts to deal with differences between image domains. It does not leave uncertain regions to the user.
 
 \subsubsection{Deep Exemplar-Based Colorization}
 
 He et al. proposed a deep exemplar-based method in which a grayscale image is colorized using a separate reference color image \cite{ref4}. The method includes components that measure the similarity between the reference and target images and then use this information to predict and transfer chrominance. The authors also introduced an automatic reference recommendation method based on semantic and luminance information.
 
-The main strength of this approach is the control provided through reference selection. Different reference images can produce different colorization results, giving users more flexibility compared to a fully automatic method. However, the main limitation compared to the proposed project is that it depends on a reference image. It does not divide the target image into different domain-specific regions or process those regions separately using specialized experts.
+Control comes from choosing the reference image. Different references give different results, so the user has more flexibility than with a fully automatic method. The method still needs a reference image. It does not split the target into domain-specific regions or process those regions with separate experts.
 
-The proposed project follows a similar idea that different visual contexts may need different color information. However, instead of using an external reference image, the proposed system gets domain-specific knowledge from separately trained experts.
+This project starts from the same idea: different visual contexts can need different color information. The framework gets that domain knowledge from separately trained experts instead of an external reference image.
 
 \subsection{Transformer, Generative and Diffusion-Based Colorization}
 
@@ -319,49 +319,49 @@ This subsection reviews colorization methods built on transformers, generative p
 
 Kumar, Weissenborn, and Kalchbrenner introduced the Colorization Transformer, which applies self-attention to the colorization problem \cite{ref5}. The system first generates a low-resolution coarse colorization and subsequently uses parallel networks to obtain higher-resolution output. The transformer architecture is designed to capture long-range dependencies, allowing information from distant image regions to influence color prediction.
 
-The strength of transformer-based colorization is its ability to model relationships extending beyond local convolutional neighborhoods. The approach also supports multiple colorization samples rather than relying exclusively on one deterministic output. A limitation is that the model remains fundamentally general-purpose rather than explicitly specialized according to semantic domains.
+Transformers model relationships beyond local convolutional neighborhoods. They can also produce several colorization samples instead of one fixed output. The model is general-purpose. It is not specialized by semantic domain.
 
-The proposed framework can benefit from this literature when designing individual experts. However, the main architectural distinction is that the proposed system places domain specialization outside the individual colorization model by routing semantic regions to separate experts.
+This work informs the design of each expert. The framework places domain specialization outside the colorization model. Semantic regions are routed to separate experts.
 
 \subsubsection{Towards Vivid and Diverse Image Colorization With Generative Color Prior}
 
 Wu et al. investigated the use of a pretrained GAN as a generative color prior \cite{ref6}. Their approach extracts features representing plausible color distributions and incorporates those features into the colorization process. The resulting method seeks vivid and diverse outputs rather than the desaturated results frequently associated with deterministic prediction.
 
-The approach demonstrates that an explicit generative color prior can improve chromatic richness and diversity. Nevertheless, the color prior is still learned as part of a general colorization framework rather than being explicitly divided according to semantic domains.
+The approach shows that an explicit generative color prior can improve color richness and variety. The prior belongs to one general colorization framework. It is not divided by semantic domain.
 
-The proposed project is related because its objective also includes realistic and perceptually convincing color. The difference is that the proposed project obtains specialization through multiple domain experts rather than through one generalized generative color prior.
+This project also aims for realistic, perceptually convincing color. Specialization comes from several domain experts. It does not come from one general color prior.
 
 \subsubsection{BigColor}
 
 Kim et al. introduced BigColor, a generative color-prior approach intended to improve colorization of complex in-the-wild images \cite{ref7}. The authors specifically identified limitations in previous generative priors that attempted to model both image structure and color simultaneously. BigColor instead focuses its generative prior on color synthesis while preserving spatial structure.
 
-The principal strength is its focus on separating color generation from structural representation. The method supports diverse colorization results and arbitrary input resolutions. Its limitation in relation to the proposed project is that its specialization is still encoded inside a unified generative architecture rather than explicitly assigned by image region.
+BigColor separates color generation from structure. The method supports varied outputs and arbitrary input resolutions. Its specialization stays inside one generative architecture. It is not assigned by image region.
 
-The proposed project similarly recognizes that image structure and color prediction are closely related, but takes a different architectural route. Semantic decomposition is performed first, after which each region is assigned to an expert whose training data corresponds to a specific domain.
+This project also treats structure and color as related. The architecture starts with semantic decomposition. Each region is then assigned to an expert trained on that domain's data.
 
 \subsubsection{Palette: Image-to-Image Diffusion Models}
 
 Saharia et al. introduced Palette, a unified conditional diffusion framework for image-to-image translation, including colorization \cite{ref8}. The work evaluates diffusion-based translation on several image restoration and transformation tasks and demonstrates the ability of conditional diffusion models to generate plausible image outputs.
 
-Palette is significant because diffusion provides another mechanism for representing the multiple plausible outputs inherent to image-to-image translation. However, the framework is designed as a general image-to-image model and does not implement the proposed region-level domain-specialized expert architecture.
+Diffusion gives another way to represent the several plausible outputs of image-to-image translation. Palette is a general image-to-image model. It does not use region-level domain-specialized experts.
 
-For the proposed work, Palette demonstrates the importance of multimodal generative modeling but does not resolve the specific problem of conflicting color distributions between different semantic domains within the same photograph.
+For this project, Palette shows how multimodal generation works. It does not solve the problem of conflicting color distributions between semantic domains in one photograph.
 
 \subsubsection{DDColor: Towards Photo-Realistic Image Colorization via Dual Decoders}
 
 Kang et al. introduced DDColor, an end-to-end colorization architecture containing a pixel decoder and a query-based color decoder \cite{ref9}. The two components jointly connect multi-scale semantic representations with color queries. The authors specifically address semantic color errors, low color richness, and color bleeding. A colorfulness loss is also used to encourage richer outputs.
 
-DDColor represents a strong general-purpose baseline because it explicitly combines semantic representations with detailed color reconstruction. Its limitation for the proposed project is architectural specialization: it remains a single colorization model rather than a framework where semantically different regions are routed to separate domain experts.
+DDColor is a strong general-purpose baseline. It combines semantic representations with detailed color reconstruction. It is still one colorization model. It does not route semantically different regions to separate domain experts.
 
-The proposed system can therefore use DDColor-type principles as a conceptual baseline for individual experts, while the principal research contribution remains the region-level MoE architecture. The official implementation also demonstrates that contemporary colorization models can be trained and evaluated as reusable software components \cite{ref10}.
+The system can use DDColor-type principles as the baseline for each expert. The research contribution is the region-level MoE architecture. The official implementation shows that modern colorization models can be trained and evaluated as reusable software components \cite{ref10}.
 
 \subsubsection{Automatic Controllable Colorization via Imagination}
 
 Cong et al. proposed an automatic colorization framework that generates candidate reference images through an imagination module and subsequently refines those references before applying them to colorization \cite{ref11}. The system addresses the ambiguity of colorization by generating multiple possible visual references and selecting suitable information for the target.
 
-A significant strength is its support for iterative and localized colorization modifications. It demonstrates that automatically generated semantic references can improve colorization flexibility. Its limitation relative to the proposed work is that the generated references are not organized as independently trained domain experts.
+The method supports iterative, local changes to colors. Automatically generated semantic references make colorization more flexible. Those references are not organized as independently trained domain experts.
 
-The proposal explicitly cites this work as evidence that grayscale-to-color mapping is multimodal. The proposed framework addresses the same ambiguity from another direction: semantic decomposition and domain-specific specialization rather than generated reference-image selection.
+The proposal cites this work as evidence that grayscale-to-color mapping is multimodal. The framework addresses the same ambiguity through semantic decomposition and domain-specific specialization. It does not select generated reference images.
 
 \subsection{Mixture-of-Experts and Conditional Computation}
 
@@ -371,41 +371,41 @@ This subsection reviews mixture-of-experts and conditional computation. It cover
 
 Shazeer et al. introduced sparsely gated Mixture-of-Experts layers as a mechanism for increasing model capacity while activating only a subset of expert networks for a particular input \cite{ref12}. A trainable gating network determines which experts participate in processing an input. The work established an important foundation for conditional computation and expert specialization.
 
-The central strength of MoE is the ability to allocate specialized computation to different inputs without requiring every expert to process every input. However, the original application was not image colorization, and its routing mechanism operates at the model/input level rather than according to semantic image regions.
+MoE allocates specialized computation to different inputs without sending every input to every expert. The original work was not about image colorization. Its router works at the model-input level, not on semantic image regions.
 
-The proposed project adapts the underlying specialization principle to a different problem. Instead of routing complete examples or transformer tokens, the proposed framework routes semantically identified regions to domain-specific colorization experts.
+This project applies the same specialization idea to colorization. The framework routes semantically identified regions, not whole examples or transformer tokens, to domain-specific colorization experts.
 
 \subsubsection{Switch Transformers}
 
 Fedus, Zoph, and Shazeer developed the Switch Transformer to simplify sparse expert routing and improve the efficiency and stability of large-scale MoE models \cite{ref13}. The architecture routes each token to an expert and thereby separates parameter capacity from the amount of computation performed for every token.
 
-Switch Transformers demonstrate that expert routing can be practical when the routing mechanism is carefully designed. Nevertheless, the architecture is primarily concerned with token-level conditional computation and was not designed for semantic image-region colorization.
+Switch Transformers show that expert routing can work in practice when the router is designed carefully. The architecture handles conditional computation at the token level. It was not built for semantic image-region colorization.
 
-The proposed project differs by defining experts according to photographic domains and by performing routing at the level of semantically decomposed regions. This distinction is central to the project\textquotesingle s intended contribution.
+The framework defines experts by photographic domain. It routes semantically decomposed regions to those experts. That is the project\textquotesingle s intended contribution.
 
 \subsubsection{Mixture of a Million Experts}
 
 He proposed PEER, a parameter-efficient expert retrieval mechanism capable of retrieving from a very large pool of small experts using product-key retrieval \cite{ref14}. The work investigates how a large number of small experts can provide increased capacity without activating all parameters simultaneously.
 
-The work strengthens the theoretical motivation for modular expert architectures and shows that fine-grained specialization can be scaled efficiently. However, its experiments concern language-modeling tasks rather than image colorization.
+The work adds to the theoretical case for modular expert architectures and shows that fine-grained specialization can scale efficiently. Its experiments are on language modeling, not image colorization.
 
-The relevance to the proposed project lies primarily in extensibility. The proposal specifically requires the architecture to support incorporation of new domain experts without rebuilding the entire system or modifying existing experts. The concept of modular expert addition is therefore consistent with broader MoE research.
+The relevant part for this project is extensibility. The proposal requires new domain experts to be added without rebuilding the system or modifying existing experts. Modular expert addition is a known idea in MoE research.
 
 \subsubsection{Gamma: Toward Generic Image Assessment with Mixture of Assessment Experts}
 
 Zhou et al. introduced Gamma, a mixture-of-assessment-experts framework designed to handle diverse image-assessment tasks and datasets \cite{ref15}. The system uses shared and adaptive experts to capture common and domain-specific information and additionally uses scene-related prompting.
 
-Gamma is especially relevant because it demonstrates that expert specialization can be used to address domain differences within computer vision rather than only in language modeling. Its limitation is that the task is image assessment rather than image generation or colorization.
+Gamma is relevant because it uses expert specialization for domain differences in computer vision, not only language modeling. It deals with image assessment, not image generation or colorization.
 
-The proposed project extends the general concept of domain specialization to a generative colorization task. Unlike Gamma, the proposed framework does not use shared/adaptive assessment experts; instead, it trains separate colorization experts for the four domains specified in the proposal.
+This project extends domain specialization to generative colorization. Gamma uses shared and adaptive assessment experts. The framework trains separate colorization experts for the four domains in the proposal.
 
 \subsubsection{RS-MoEGAN: Sparse Mixture-of-Experts for Cross-Modal Remote Sensing Image Generation}
 
 Fan et al. proposed RS-MoEGAN, which applies sparse Mixture-of-Experts routing to cross-modal remote-sensing image generation \cite{ref16}. The motivation is particularly relevant to the proposed project because different land-cover types can impose conflicting requirements on image generation. RS-MoEGAN uses a learned router to assign image tokens to specialized experts.
 
-The work provides direct evidence that MoE can be useful when a generative vision problem contains conflicting domain-specific requirements. Its main limitation relative to the proposed project is the routing granularity and application domain: it uses token-level routing in remote sensing rather than semantic region-level routing for photographic colorization.
+The work shows that MoE can help when a generative vision problem has conflicting domain requirements. It routes tokens in remote sensing. The framework routes semantic regions in photographs.
 
-The proposed project is closely related conceptually. Both approaches seek to avoid forcing a single generative model to learn conflicting visual mappings. The proposed project differs by decomposing photographic images into semantic regions and routing those regions to four explicitly defined colorization domains.
+The two projects are related. Both avoid forcing one generative model to learn conflicting visual mappings. The framework decomposes photographs into semantic regions and routes them to four defined colorization domains.
 
 \subsection{Semantic Region Decomposition and Routing}
 
@@ -509,23 +509,23 @@ This section reviews existing colorization applications and development systems 
 
 DDColor is an open source implementation of the ICCV 2023 dual decoder colorization architecture \cite{ref9,ref10}. The project provides pretrained models, training scripts, inference functionality, and model export support.
 
-Its principal strength is the availability of a complete research implementation and a colorization architecture explicitly designed to reduce semantic color errors and color bleeding. Its limitation relative to the proposed project is that the colorization model remains general purpose rather than consisting of separate experts for people, nature, urban and man made scenes, and animals.
+DDColor includes a complete research implementation and an architecture designed to reduce semantic color errors and color bleeding. It is a general-purpose model. It does not split people, nature, urban and man made scenes, and animals into separate experts.
 
 \subsection{Colorful Image Colorization}
 
-The Colorful Image Colorization project provides an implementation of the ECCV 2016 colorization method and supports automatic grayscale to color conversion \cite{ref1,ref22}. Its major strength is its simple automatic inference pipeline and established research foundation. Its principal limitation relative to the proposed project is that it applies a general colorization model rather than selecting domain specific experts for different semantic regions.
+The Colorful Image Colorization project implements the ECCV 2016 method and supports automatic grayscale to color conversion \cite{ref1,ref22}. Its inference pipeline is simple and the method is well established. It applies one general colorization model. It does not select domain-specific experts for different semantic regions.
 
 \subsection{DeOldify}
 
 DeOldify \cite{deoldify} is an open source image and film colorization project intended for the restoration and colorization of historical images and footage. Its documentation describes both image and video colorization and emphasizes improvements in artifacts, detail, and color rendering.
 
-Its principal strength is its practical restoration capability and support for both image and video scenarios. However, video is explicitly outside the current scope of the proposed project, and DeOldify does not implement the proposed four domain semantic routing architecture. The project therefore serves as a practical general purpose comparison rather than an architectural equivalent.
+DeOldify restores images and videos in practice. Video is outside this project's scope. DeOldify also does not implement the proposed four domain semantic routing architecture. It serves as a practical general purpose comparison, not an architectural equivalent.
 
 \subsection{DeepAI Image Colorizer}
 
 DeepAI \cite{deepai} provides an accessible image colorization application through which users can upload images and request automatic colorization.
 
-The main advantage of DeepAI Image Colorizer is its accessibility through an application interface, which removes the need for users to train or operate a research model. However, its underlying model architecture and routing strategy are not exposed sufficiently to establish the type of domain specialized processing proposed in this project. Consequently, it is useful as an application level comparison rather than as an architectural baseline.
+DeepAI Image Colorizer is accessible through an application interface. Users do not need to train or operate a research model. Its model architecture and routing strategy are not exposed in enough detail to establish the type of domain specialized processing proposed here. It serves as an application level comparison, not an architectural baseline.
 
 
 \subsection{Identification of Research and Technological Gap}
